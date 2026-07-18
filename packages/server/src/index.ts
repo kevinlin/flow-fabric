@@ -14,6 +14,8 @@ export type { UserTaskWaitInfo } from './engine-host/engine-host.js';
 export { Inbox } from './inbox/inbox.js';
 export { MacNotifier } from './notify/notifier.js';
 export type { Notifier } from './notify/notifier.js';
+export { buildApi } from './api/server.js';
+export type { ApiDeps } from './api/server.js';
 export { readProfile } from './profile/read.js';
 export type { ProcessProfile } from './profile/read.js';
 export type { RunContext, RunResult, TaskRunner } from './runners/types.js';

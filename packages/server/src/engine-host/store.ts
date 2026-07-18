@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import Database from 'better-sqlite3';
 
 export type InstanceStatus =
@@ -86,9 +87,11 @@ function coerceInstance(row: RawInstanceRow): InstanceRow {
 
 export class InstanceStore {
   private db: Database.Database;
+  private emitter = new EventEmitter();
 
   constructor(dbPath: string) {
     this.db = new Database(dbPath);
+    this.emitter.setMaxListeners(0); // one listener per SSE connection
     this.db.pragma('journal_mode = WAL');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS instances (
@@ -148,6 +151,9 @@ export class InstanceStore {
         created_at INTEGER NOT NULL,
         resolved_at INTEGER
       );
+      CREATE UNIQUE INDEX IF NOT EXISTS one_active_per_workspace
+        ON instances(workspace_path)
+        WHERE status IN ('running', 'incident') AND workspace_path != '';
     `);
   }
 
@@ -193,9 +199,24 @@ export class InstanceStore {
   }
 
   appendEvent(instanceId: string, type: string, elementId?: string, detail?: string): void {
-    this.db
+    const ts = Date.now();
+    const result = this.db
       .prepare(`INSERT INTO events (instance_id, type, element_id, detail, ts) VALUES (?, ?, ?, ?, ?)`)
-      .run(instanceId, type, elementId ?? null, detail ?? null, Date.now());
+      .run(instanceId, type, elementId ?? null, detail ?? null, ts);
+    this.emitter.emit('event', {
+      instanceId,
+      seq: Number(result.lastInsertRowid),
+      type,
+      elementId: elementId ?? null,
+      detail: detail ?? null,
+      ts,
+    });
+  }
+
+  /** Subscribe to appended events (SSE fan-out). Returns an unsubscribe function. */
+  onEvent(listener: (event: EventRow & { instanceId: string }) => void): () => void {
+    this.emitter.on('event', listener);
+    return () => this.emitter.off('event', listener);
   }
 
   getInstance(id: string): InstanceRow | undefined {
@@ -211,6 +232,14 @@ export class InstanceStore {
         .prepare(
           `SELECT ${INSTANCE_COLUMNS} FROM instances WHERE status IN ('running', 'stopped', 'incident')`,
         )
+        .all() as RawInstanceRow[]
+    ).map(coerceInstance);
+  }
+
+  listInstances(): InstanceRow[] {
+    return (
+      this.db
+        .prepare(`SELECT ${INSTANCE_COLUMNS} FROM instances ORDER BY created_at`)
         .all() as RawInstanceRow[]
     ).map(coerceInstance);
   }

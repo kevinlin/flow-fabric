@@ -53,8 +53,12 @@ export class EngineHost {
 
   constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {}
 
-  /** Start a new instance. Resolves on completion or stop; rejects on engine error. */
-  async start(opts: {
+  /**
+   * Start a new instance. Resolves on completion or stop; rejects on engine error.
+   * Not `async`: the row insert runs synchronously so the workspace-lock conflict
+   * (FR-10) throws to the caller instead of landing on the returned promise.
+   */
+  start(opts: {
     id: string;
     name: string;
     source: string;
@@ -68,6 +72,15 @@ export class EngineHost {
       dryRun: opts.dryRun,
       stubOverrides: opts.stubOverrides,
     });
+    return this.startEngine(opts);
+  }
+
+  private async startEngine(opts: {
+    id: string;
+    name: string;
+    source: string;
+    variables?: Record<string, unknown>;
+  }): Promise<void> {
     const row = this.store.getInstance(opts.id)!;
     const components = await this.engineComponents(row);
     // bpmn-engine's option types don't cover custom extensions/scripts hooks.
