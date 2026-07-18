@@ -1,0 +1,6 @@
+{
+  "name": "@flowfabric/web",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "echo 'web: placeholder until M4'", "test": "echo 'web: no tests yet'" }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@flowfabric/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "bpmn-engine": "^25",
+    "better-sqlite3": "^12"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6",
+    "@types/node": "^22",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}

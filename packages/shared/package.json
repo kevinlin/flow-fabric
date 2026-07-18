@@ -1,0 +1,7 @@
+{
+  "name": "@flowfabric/shared",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "tsc -p .", "test": "echo 'shared: no tests yet'" },
+  "devDependencies": { "typescript": "^5" }
+}
