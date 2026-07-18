@@ -13,9 +13,16 @@ const SNAPSHOT_EVENTS = ['activity.start', 'activity.wait', 'activity.timer', 'a
  * bpmn-engine's published option types; cast at the engine boundary only. */
 type EngineOptions = ConstructorParameters<typeof Engine>[0];
 
+export interface UserTaskWaitInfo {
+  instanceId: string;
+  nodeId: string;
+  formSchema: Record<string, unknown>;
+}
+
 export interface EngineHostOptions {
   runners?: RunnerSet;
   dataDir?: string;
+  onUserTaskWait?: (info: UserTaskWaitInfo) => void;
 }
 
 interface RunningEntry {
@@ -137,6 +144,12 @@ export class EngineHost {
       listener.on(event, (api: { id: string }) => {
         this.store.appendEvent(id, event, api.id);
         snapshot();
+        if (event === 'activity.wait') {
+          const contract = this.profiles.get(id)?.contracts.get(api.id);
+          if (contract?.kind === 'user') {
+            this.opts.onUserTaskWait?.({ instanceId: id, nodeId: api.id, formSchema: contract.formSchema });
+          }
+        }
       });
     }
 

@@ -1,0 +1,34 @@
+import type { InstanceStore, UserTaskRow } from '../engine-host/store.js';
+import type { EngineHost, UserTaskWaitInfo } from '../engine-host/engine-host.js';
+import type { Notifier } from '../notify/notifier.js';
+import { validateOutput } from '../runners/validate.js';
+
+export class Inbox {
+  constructor(
+    private store: InstanceStore,
+    private host: EngineHost,
+    private notifier: Notifier,
+  ) {}
+
+  /** Wire as EngineHostOptions.onUserTaskWait. Idempotent across resumes. */
+  handleWait(info: UserTaskWaitInfo): void {
+    if (this.store.findPendingUserTask(info.instanceId, info.nodeId)) return;
+    this.store.createUserTask(info.instanceId, info.nodeId, JSON.stringify(info.formSchema));
+    void this.notifier.notify(
+      'Flow Fabric: task waiting',
+      `${info.instanceId}: ${info.nodeId} needs your input`,
+    );
+  }
+
+  listPending(): UserTaskRow[] {
+    return this.store.listPendingUserTasks();
+  }
+
+  async submit(taskId: number, vars: Record<string, unknown>): Promise<void> {
+    const task = this.store.getUserTask(taskId);
+    if (!task || task.status !== 'pending') throw new Error(`no pending user task ${taskId}`);
+    validateOutput(JSON.parse(task.formSchema), vars); // FR-13: validate before resuming
+    this.host.signal(task.instanceId, task.nodeId, vars);
+    this.store.submitUserTask(taskId, vars);
+  }
+}
