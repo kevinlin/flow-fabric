@@ -4,6 +4,7 @@ import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
 import type { DefinitionStore } from '../definitions/store.js';
+import type { GrillHost } from '../grill/session.js';
 import { lint } from '../linter/lint.js';
 import { OutputValidationError } from '../runners/validate.js';
 
@@ -12,30 +13,48 @@ export interface ApiDeps {
   host: EngineHost;
   inbox: Inbox;
   definitions?: DefinitionStore;
+  grill?: GrillHost;
 }
 
-export function buildApi({ store, host, inbox, definitions }: ApiDeps): FastifyInstance {
+export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): FastifyInstance {
   const app = Fastify();
 
   app.get('/api/healthz', async () => ({ ok: true }));
 
   app.post('/api/instances', async (req, reply) => {
     const body = req.body as {
-      name: string;
-      source: string;
+      name?: string;
+      source?: string;
+      definitionId?: string;
+      version?: number;
       workspacePath: string;
       dryRun?: boolean;
       inputs?: Record<string, unknown>;
       stubOverrides?: Record<string, Record<string, unknown>>;
     };
+    let name = body.name ?? 'instance';
+    let source = body.source;
+    if (body.definitionId) {
+      if (!definitions) return reply.code(400).send({ error: 'no definition store configured' });
+      const version = body.version !== undefined
+        ? definitions.getVersion(body.definitionId, body.version)
+        : definitions.getLatestVersion(body.definitionId);
+      if (!version) return reply.code(404).send({ error: 'definition version not found' });
+      if (!version.deployable) {
+        return reply.code(400).send({ error: `version ${version.versionNo} is not deployable; lint it clean first (FR-3)` });
+      }
+      source = version.xml;
+      name = definitions.getDefinition(body.definitionId)?.name ?? name;
+    }
+    if (!source) return reply.code(400).send({ error: 'source or definitionId required' });
     const id = randomUUID();
     try {
       // start() inserts the row synchronously (so the workspace-lock conflict
       // throws here), then runs to completion in the background.
       const completion = host.start({
         id,
-        name: body.name,
-        source: body.source,
+        name,
+        source,
         workspace: body.workspacePath,
         variables: body.inputs,
         dryRun: body.dryRun,
@@ -147,6 +166,52 @@ export function buildApi({ store, host, inbox, definitions }: ApiDeps): FastifyI
       const report = await lint(version.xml);
       definitions.setLintReport(version.definitionId, version.versionNo, report);
       return report;
+    });
+  }
+
+  if (grill) {
+    app.post('/api/grill/sessions', async (req, reply) => {
+      const { definitionId } = req.body as { definitionId: string };
+      try {
+        const session = await grill.start(definitionId);
+        return reply.code(201).send({ sessionId: session.id, lint: session.lintReport });
+      } catch (err) {
+        return reply.code(404).send({ error: String(err) });
+      }
+    });
+
+    app.post('/api/grill/sessions/:id/messages', async (req, reply) => {
+      const session = grill.get((req.params as { id: string }).id);
+      if (!session) return reply.code(404).send({ error: 'no such session' });
+      const { text } = req.body as { text: string };
+      // The turn streams over SSE; the POST only acknowledges receipt.
+      session.send(text).catch((err) => app.log.error({ err }, 'grill turn failed'));
+      return reply.code(202).send({ accepted: true });
+    });
+
+    app.post('/api/grill/sessions/:id/save-version', async (req, reply) => {
+      const session = grill.get((req.params as { id: string }).id);
+      if (!session) return reply.code(404).send({ error: 'no such session' });
+      return session.saveVersion();
+    });
+
+    app.get('/api/grill/sessions/:id/events', async (req, reply) => {
+      const session = grill.get((req.params as { id: string }).id);
+      if (!session) return reply.code(404).send({ error: 'no such session' });
+      reply.raw.writeHead(200, {
+        'content-type': 'text/event-stream',
+        'cache-control': 'no-cache',
+        connection: 'keep-alive',
+      });
+      reply.raw.write(': connected\n\n');
+      const unsubscribe = session.onEvent((event) => {
+        reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+      });
+      req.raw.on('close', () => {
+        unsubscribe();
+        reply.raw.end();
+      });
+      return reply;
     });
   }
 
