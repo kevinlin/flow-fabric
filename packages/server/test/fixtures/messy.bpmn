@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             id="messyDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="messyProcess" isExecutable="true">
+    <startEvent id="start" name="Daily check starts" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="checkTracker" />
+    <task id="checkTracker" name="Check the tracker" />
+    <sequenceFlow id="f2" sourceRef="checkTracker" targetRef="gw" />
+    <exclusiveGateway id="gw" name="At risk?" />
+    <sequenceFlow id="flowYes" name="Yes" sourceRef="gw" targetRef="notify" />
+    <sequenceFlow id="flowNo" name="No" sourceRef="gw" targetRef="endOk" />
+    <task id="notify" name="Notify user" />
+    <sequenceFlow id="f3" sourceRef="notify" targetRef="endStop" />
+    <endEvent id="endOk" name="All good" />
+    <endEvent id="endStop" name="Task ends here do not re-run" />
+  </process>
+  <bpmndi:BPMNDiagram id="diagram">
+    <bpmndi:BPMNPlane id="plane" bpmnElement="messyProcess">
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+        <omgdc:Bounds x="100" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="checkTracker_di" bpmnElement="checkTracker">
+        <omgdc:Bounds x="180" y="90" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gw_di" bpmnElement="gw">
+        <omgdc:Bounds x="320" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="notify_di" bpmnElement="notify">
+        <omgdc:Bounds x="410" y="90" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="endOk_di" bpmnElement="endOk">
+        <omgdc:Bounds x="330" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="endStop_di" bpmnElement="endStop">
+        <omgdc:Bounds x="550" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1">
+        <omgdi:waypoint x="136" y="118" /><omgdi:waypoint x="180" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2">
+        <omgdi:waypoint x="280" y="120" /><omgdi:waypoint x="320" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flowYes_di" bpmnElement="flowYes">
+        <omgdi:waypoint x="370" y="120" /><omgdi:waypoint x="410" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flowNo_di" bpmnElement="flowNo">
+        <omgdi:waypoint x="345" y="145" /><omgdi:waypoint x="348" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3">
+        <omgdi:waypoint x="510" y="120" /><omgdi:waypoint x="550" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
