@@ -7,7 +7,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@flowfabric/shared": "workspace:*",
+    "ajv": "^8",
     "bpmn-engine": "^25",
+    "bpmn-moddle": "^10",
     "better-sqlite3": "^12"
   },
   "devDependencies": {
