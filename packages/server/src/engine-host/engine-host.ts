@@ -50,6 +50,7 @@ export class EngineHost {
   private profiles = new Map<string, ProcessProfile>();
   private holds = new Map<string, Hold>();
   private aborting = new Set<string>();
+  private terminated = new Set<string>();
 
   constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {}
 
@@ -219,6 +220,7 @@ export class EngineHost {
     for (const event of SNAPSHOT_EVENTS) {
       listener.on(event, (api: { id: string }) => {
         this.store.appendEvent(id, event, api.id);
+        if (this.profiles.get(id)?.terminateEnds.has(api.id)) this.terminated.add(id);
         snapshot();
         if (event === 'activity.wait') {
           const contract = this.profiles.get(id)?.contracts.get(api.id);
@@ -246,7 +248,7 @@ export class EngineHost {
       const state = await engine.getState();
       this.store.saveEngineState(id, JSON.stringify(state));
       if (result === 'end') {
-        this.store.setStatus(id, 'completed');
+        this.store.setStatus(id, this.terminated.delete(id) ? 'terminated' : 'completed');
       } else if (this.aborting.has(id)) {
         this.store.setStatus(id, 'aborted');
         this.aborting.delete(id);
