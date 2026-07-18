@@ -92,7 +92,7 @@ Namespace: `http://flowfabric.dev/schema/1.0`. Contracts live in `bpmn:extension
 
 - `scriptTask` → `<flowfabric:codeTask command="..." retries timeoutSeconds>` + inputs + `outputSchema`.
 - `userTask` → `<flowfabric:userTask>` + `<flowfabric:formSchema>` (JSON Schema; the inbox renders the form from it).
-- Gateway conditions: standard `bpmn:conditionExpression` with `${...}` expressions over process variables only (bpmn-engine native format), e.g. `${variables.deadlinePassed === true}`. Default flow marks the fallback path.
+- Gateway conditions: standard `bpmn:conditionExpression` with `${...}` expressions over process variables only (bpmn-engine native format), e.g. `${environment.variables.deadlinePassed === true}`. Default flow marks the fallback path.
 
 ### 4.3 Linter rules (deployability gate)
 
