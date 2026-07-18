@@ -35,9 +35,18 @@ importers:
 
   packages/shared:
     devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      bpmn-moddle:
+        specifier: ^10
+        version: 10.0.0
       typescript:
         specifier: ^5
         version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.7(@types/node@22.20.1)(tsx@4.23.1)
 
   packages/web: {}
 
@@ -414,6 +423,10 @@ packages:
     peerDependencies:
       smqp: '>=9'
 
+  bpmn-moddle@10.0.0:
+    resolution: {integrity: sha512-vXePD5jkatcILmM3zwJG/m6IIHIghTGB7WvgcdEraEw8E8VdJHrTgrvBUhbzqaXJpnsGQz15QS936xeBY6l9aA==}
+    engines: {node: '>= 20.12'}
+
   bpmn-moddle@9.0.4:
     resolution: {integrity: sha512-dr5s3vtOG8NkVSwa8CC55XBIKKwajomSZRb0RiMOOOF6TpqZBZvtbDjpzWICvdd/plDF6uOtaRfSgblPQLAioQ==}
     engines: {node: '>= 18'}
@@ -531,6 +544,9 @@ packages:
   min-dash@4.2.3:
     resolution: {integrity: sha512-VLMYQI5+FcD9Ad24VcB08uA83B07OhueAlZ88jBK6PyupTvEJwllTMUqMy0wPGYs7pZUEtEEMWdHB63m3LtEcg==}
 
+  min-dash@5.1.0:
+    resolution: {integrity: sha512-HAvN6XzmCQj+js43G9sJRRw8kj/7DvoxN7qhoIN9Xo5ZN1NMljtpyKs/NunXmw0QSWwlgZzNv6tLeEa4xaZ0tg==}
+
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
@@ -548,8 +564,17 @@ packages:
     peerDependencies:
       moddle: '>= 6.2.0'
 
+  moddle-xml@12.1.0:
+    resolution: {integrity: sha512-+m50j9/MFGhvWbLJoKSSjQj3uv7SYm2w5i2lfv6goWarlWW1Nd0A31NYUXmKuWnEZ8Mm/bH1RZYtuf4x8ptY7g==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      moddle: '>= 6.2.0'
+
   moddle@7.2.0:
     resolution: {integrity: sha512-x1+JREThy7JBOBR3g2hbOnOfrlC/YAWXX9RzrSZS5HhqeuBly9H/PCtOBtcQs+Y2sjRAXF+WTNSgHvn8Uq+6Yw==}
+
+  moddle@8.2.0:
+    resolution: {integrity: sha512-okP9kfyOJrUxCVkwy9xpTQ54UmrEkMkjNWsyZNU9+uhdjYO43BLftUrgmaOBBBGZ7hUbJSevJFfRamxiCzaQlw==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -615,6 +640,10 @@ packages:
   saxen@10.0.0:
     resolution: {integrity: sha512-RXsmWok/SAWqOG/f5ADEz51DN9WtZEzqih3e08ranldcaXekxjx8NBKjGh/y5hlowjo0JH/LekBu6gtPFD1G6g==}
     engines: {node: '>= 18'}
+
+  saxen@11.1.0:
+    resolution: {integrity: sha512-GOxBOAmiWVAytOHBuMlgFMZ4MAk+2Ny5QJpzM9I4IozfPLXq3FsDdIHNviTQGZGIx7G2mBkA+uySiJlYmSU1Gg==}
+    engines: {node: '>= 20.12'}
 
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
@@ -1034,6 +1063,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  bpmn-moddle@10.0.0:
+    dependencies:
+      min-dash: 5.1.0
+      moddle: 8.2.0
+      moddle-xml: 12.1.0(moddle@8.2.0)
+
   bpmn-moddle@9.0.4:
     dependencies:
       min-dash: 4.2.3
@@ -1147,6 +1182,8 @@ snapshots:
 
   min-dash@4.2.3: {}
 
+  min-dash@5.1.0: {}
+
   minimist@1.2.8: {}
 
   mkdirp-classic@0.5.3: {}
@@ -1161,9 +1198,19 @@ snapshots:
       moddle: 7.2.0
       saxen: 10.0.0
 
+  moddle-xml@12.1.0(moddle@8.2.0):
+    dependencies:
+      min-dash: 5.1.0
+      moddle: 8.2.0
+      saxen: 11.1.0
+
   moddle@7.2.0:
     dependencies:
       min-dash: 4.2.3
+
+  moddle@8.2.0:
+    dependencies:
+      min-dash: 5.1.0
 
   ms@2.1.3: {}
 
@@ -1260,6 +1307,8 @@ snapshots:
   safe-buffer@5.2.1: {}
 
   saxen@10.0.0: {}
+
+  saxen@11.1.0: {}
 
   semver@7.8.5: {}
 

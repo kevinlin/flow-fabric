@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowfabric="http://flowfabric.dev/schema/1.0"
+             id="contractsDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="contractsProcess" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="agentTask" />
+    <serviceTask id="agentTask" name="Audit tracker">
+      <extensionElements>
+        <flowfabric:agentTask retries="2" timeoutSeconds="600">
+          <flowfabric:prompt>Audit the project tracker; flag tasks at risk.</flowfabric:prompt>
+          <flowfabric:tools>Read,Grep,Glob</flowfabric:tools>
+          <flowfabric:boundaries>Never modify files outside 30_tracker/</flowfabric:boundaries>
+          <flowfabric:input name="deadline" type="string" />
+          <flowfabric:outputSchema>{"type":"object","required":["atRiskTasks"],"properties":{"atRiskTasks":{"type":"array","items":{"type":"string"}}},"additionalProperties":true}</flowfabric:outputSchema>
+        </flowfabric:agentTask>
+      </extensionElements>
+    </serviceTask>
+    <sequenceFlow id="f2" sourceRef="agentTask" targetRef="codeTask" />
+    <scriptTask id="codeTask" name="Check counts">
+      <extensionElements>
+        <flowfabric:codeTask command="node check.js" retries="1" timeoutSeconds="30">
+          <flowfabric:input name="atRiskTasks" type="array" />
+          <flowfabric:outputSchema>{"type":"object","required":["count"],"properties":{"count":{"type":"number"}},"additionalProperties":true}</flowfabric:outputSchema>
+        </flowfabric:codeTask>
+      </extensionElements>
+    </scriptTask>
+    <sequenceFlow id="f3" sourceRef="codeTask" targetRef="userTask" />
+    <userTask id="userTask" name="Approve result">
+      <extensionElements>
+        <flowfabric:userTask>
+          <flowfabric:formSchema>{"type":"object","required":["approved"],"properties":{"approved":{"type":"boolean"}},"additionalProperties":false}</flowfabric:formSchema>
+        </flowfabric:userTask>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="f4" sourceRef="userTask" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>

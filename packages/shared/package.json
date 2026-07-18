@@ -2,6 +2,17 @@
   "name": "@flowfabric/shared",
   "private": true,
   "type": "module",
-  "scripts": { "build": "tsc -p .", "test": "echo 'shared: no tests yet'" },
-  "devDependencies": { "typescript": "^5" }
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": { "build": "tsc -p .", "test": "vitest run" },
+  "devDependencies": {
+    "@types/node": "^22",
+    "bpmn-moddle": "^10",
+    "typescript": "^5",
+    "vitest": "^3"
+  }
 }
