@@ -31,3 +31,6 @@ dist/
 # Node
 node_modules/
 *.tsbuildinfo
+
+# AGENTS.md
+AGENTS.md
