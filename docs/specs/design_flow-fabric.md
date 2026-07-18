@@ -70,7 +70,7 @@ Each module has one purpose and a defined interface; dependencies point inward t
 | `bpmn:scriptTask` | Deterministic code |
 | `bpmn:serviceTask` | Agent (Claude) |
 
-Lanes are documentation only. Supported elements (FR-6): start/end events (incl. terminate), exclusive gateways, the three task types, timer intermediate catch events (duration `PT24H`, cycle `R/PT24H`), error boundary events. Linter rejects everything else.
+Lanes are documentation only. Supported elements (FR-6): start/end events (incl. terminate), exclusive gateways, the three task types, timer intermediate catch events (duration only, e.g. `PT24H`), error boundary events. Linter rejects everything else. `timeCycle` is not supported — bpmn-engine fires it once and ignores the repeat count (M1 spike finding, [findings_m1-spike.md](findings_m1-spike.md)); model recurrence as a gateway loop around a duration timer.
 
 ### 4.2 `flowfabric` extension elements
 
