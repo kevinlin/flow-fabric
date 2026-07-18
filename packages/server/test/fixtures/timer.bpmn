@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="timerDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="timerProcess" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="before" />
+    <scriptTask id="before" scriptFormat="javascript">
+      <script><![CDATA[
+        this.environment.variables.count = (this.environment.variables.count || 0) + 1;
+        next();
+      ]]></script>
+    </scriptTask>
+    <sequenceFlow id="f2" sourceRef="before" targetRef="wait" />
+    <intermediateCatchEvent id="wait">
+      <timerEventDefinition>
+        <timeDuration xsi:type="tFormalExpression">PT6S</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="f3" sourceRef="wait" targetRef="after" />
+    <scriptTask id="after" scriptFormat="javascript">
+      <script><![CDATA[
+        this.environment.variables.count = (this.environment.variables.count || 0) + 1;
+        next();
+      ]]></script>
+    </scriptTask>
+    <sequenceFlow id="f4" sourceRef="after" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>
