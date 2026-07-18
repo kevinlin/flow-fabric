@@ -3,15 +3,17 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
+import type { DefinitionStore } from '../definitions/store.js';
 import { OutputValidationError } from '../runners/validate.js';
 
 export interface ApiDeps {
   store: InstanceStore;
   host: EngineHost;
   inbox: Inbox;
+  definitions?: DefinitionStore;
 }
 
-export function buildApi({ store, host, inbox }: ApiDeps): FastifyInstance {
+export function buildApi({ store, host, inbox, definitions }: ApiDeps): FastifyInstance {
   const app = Fastify();
 
   app.get('/api/healthz', async () => ({ ok: true }));
@@ -118,6 +120,24 @@ export function buildApi({ store, host, inbox }: ApiDeps): FastifyInstance {
     });
     return reply; // keep the connection open
   });
+
+  if (definitions) {
+    app.post('/api/definitions', async (req, reply) => {
+      const { name, xml } = req.body as { name: string; xml: string };
+      const { id, versionNo } = definitions.upload(name, xml);
+      return reply.code(201).send({ id, versionNo });
+    });
+
+    app.get('/api/definitions', async () => ({ definitions: definitions.listDefinitions() }));
+
+    app.get('/api/definitions/:id/versions/:v', async (req, reply) => {
+      const { id, v } = req.params as { id: string; v: string };
+      const version =
+        v === 'latest' ? definitions.getLatestVersion(id) : definitions.getVersion(id, Number(v));
+      if (!version) return reply.code(404).send({ error: 'not found' });
+      return version;
+    });
+  }
 
   return app;
 }
