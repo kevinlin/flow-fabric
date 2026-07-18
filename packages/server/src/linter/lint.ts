@@ -62,6 +62,10 @@ export async function lint(xml: string): Promise<LintReport> {
     ruleUnsupportedElements(elements, findings);
     ruleMissingContracts(elements, findings);
     ruleGatewayConditions(elements, findings);
+    const graph = buildGraph(elements);
+    ruleUndeclaredVariables(root, elements, graph, findings);
+    ruleOrphanNodes(elements, graph, findings);
+    ruleInstructionLabels(elements, findings);
   }
   return report(findings);
 }
@@ -164,6 +168,141 @@ function ruleGatewayConditions(elements: any[], findings: LintFinding[]): void {
           flow.id,
         ));
       }
+    }
+  }
+}
+
+interface Graph {
+  /** nodeId -> directly following nodeIds (sequence flows + host->boundary). */
+  next: Map<string, string[]>;
+  nodeIds: Set<string>;
+}
+
+function buildGraph(elements: any[]): Graph {
+  const next = new Map<string, string[]>();
+  const nodeIds = new Set<string>();
+  const push = (from: string, to: string) => {
+    if (!next.has(from)) next.set(from, []);
+    next.get(from)!.push(to);
+  };
+  for (const el of elements) {
+    if (el.$type === 'bpmn:SequenceFlow') {
+      if (el.sourceRef?.id && el.targetRef?.id) push(el.sourceRef.id, el.targetRef.id);
+    } else if (!PASSIVE_TYPES.has(el.$type)) {
+      nodeIds.add(el.id);
+      // a boundary event is reachable whenever its host is
+      if (el.$type === 'bpmn:BoundaryEvent' && el.attachedToRef?.id) push(el.attachedToRef.id, el.id);
+    }
+  }
+  return { next, nodeIds };
+}
+
+function reachableFrom(graph: Graph, startIds: string[]): Set<string> {
+  const seen = new Set<string>(startIds);
+  const queue = [...startIds];
+  while (queue.length > 0) {
+    for (const to of graph.next.get(queue.shift()!) ?? []) {
+      if (!seen.has(to)) {
+        seen.add(to);
+        queue.push(to);
+      }
+    }
+  }
+  return seen;
+}
+
+const CONDITION_VAR = /environment\.variables\.([A-Za-z_$][A-Za-z0-9_$]*)/g;
+
+// Rule 4 (FF004): every consumed variable is produced strictly upstream or declared
+// as an instance input (FR-3). "Upstream" = the consumer is reachable from the producer.
+function ruleUndeclaredVariables(proc: any, elements: any[], graph: Graph, findings: LintFinding[]): void {
+  const ext = (el: any, typeName: string) =>
+    el.extensionElements?.values?.find((v: any) => v.$type === typeName);
+  const schemaProps = (text: string | undefined): string[] => {
+    try {
+      return Object.keys(JSON.parse(text ?? '{}').properties ?? {});
+    } catch {
+      return [];
+    }
+  };
+
+  const instanceInputs = new Set<string>(
+    (ext(proc, 'flowfabric:InstanceInputs')?.inputs ?? []).map((i: any) => i.name),
+  );
+
+  const producers = new Map<string, string[]>(); // variable name -> producing node ids
+  const produce = (name: string, nodeId: string) => {
+    if (!producers.has(name)) producers.set(name, []);
+    producers.get(name)!.push(nodeId);
+  };
+  for (const el of elements) {
+    const contract = ext(el, 'flowfabric:AgentTask') ?? ext(el, 'flowfabric:CodeTask');
+    if (contract) for (const p of schemaProps(contract.outputSchema?.text)) produce(p, el.id);
+    const user = ext(el, 'flowfabric:UserTask');
+    if (user) for (const p of schemaProps(user.formSchema?.text)) produce(p, el.id);
+  }
+
+  // consumers: declared task inputs + variables referenced in gateway conditions
+  const consumers: Array<{ nodeId: string; variable: string }> = [];
+  for (const el of elements) {
+    const contract = ext(el, 'flowfabric:AgentTask') ?? ext(el, 'flowfabric:CodeTask');
+    for (const input of contract?.inputs ?? []) consumers.push({ nodeId: el.id, variable: input.name });
+    if (el.$type === 'bpmn:SequenceFlow' && el.conditionExpression?.body && el.sourceRef?.id) {
+      for (const m of el.conditionExpression.body.matchAll(CONDITION_VAR)) {
+        consumers.push({ nodeId: el.sourceRef.id, variable: m[1] });
+      }
+    }
+  }
+
+  const reachCache = new Map<string, Set<string>>();
+  const reaches = (from: string, to: string) => {
+    if (!reachCache.has(from)) reachCache.set(from, reachableFrom(graph, graph.next.get(from) ?? []));
+    return reachCache.get(from)!.has(to);
+  };
+
+  const flagged = new Set<string>();
+  for (const { nodeId, variable } of consumers) {
+    if (instanceInputs.has(variable)) continue;
+    const ok = (producers.get(variable) ?? []).some((p) => p !== nodeId && reaches(p, nodeId));
+    const key = `${nodeId}:${variable}`;
+    if (!ok && !flagged.has(key)) {
+      flagged.add(key);
+      findings.push(finding(
+        LINT_RULES.UNDECLARED_VARIABLE, 'error',
+        `variable "${variable}" used at ${nodeId} is not produced upstream and not declared as an instance input`,
+        nodeId,
+      ));
+    }
+  }
+}
+
+// Rule 5 (FF005): every flow node is reachable from a start event.
+function ruleOrphanNodes(elements: any[], graph: Graph, findings: LintFinding[]): void {
+  const startIds = elements.filter((el) => el.$type === 'bpmn:StartEvent').map((el) => el.id);
+  const reachable = reachableFrom(graph, startIds);
+  for (const id of graph.nodeIds) {
+    if (!reachable.has(id)) {
+      findings.push(finding(
+        LINT_RULES.ORPHAN_NODE, 'error',
+        `node ${id} is unreachable from any start event; no removeNode patch op exists — delete it in the source editor and re-upload`,
+        id,
+      ));
+    }
+  }
+}
+
+// Rule 6 (FF006): instruction-bearing labels belong in BPMN semantics, not prose.
+const INSTRUCTION_LABEL = /(do\s+no?t?\s+re-?\s?run|ends?\s+here)/i;
+
+function ruleInstructionLabels(elements: any[], findings: LintFinding[]): void {
+  for (const el of elements) {
+    if (el.$type === 'bpmn:SequenceFlow' || PASSIVE_TYPES.has(el.$type)) continue;
+    if (typeof el.name === 'string' && INSTRUCTION_LABEL.test(el.name)) {
+      findings.push(finding(
+        LINT_RULES.INSTRUCTION_LABEL, 'warning',
+        `label "${el.name}" on ${el.id} carries execution instructions; model it as a terminate end event or loop condition instead`,
+        el.id,
+      ));
     }
   }
 }

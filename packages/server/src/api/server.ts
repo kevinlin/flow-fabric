@@ -4,6 +4,7 @@ import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
 import type { DefinitionStore } from '../definitions/store.js';
+import { lint } from '../linter/lint.js';
 import { OutputValidationError } from '../runners/validate.js';
 
 export interface ApiDeps {
@@ -136,6 +137,16 @@ export function buildApi({ store, host, inbox, definitions }: ApiDeps): FastifyI
         v === 'latest' ? definitions.getLatestVersion(id) : definitions.getVersion(id, Number(v));
       if (!version) return reply.code(404).send({ error: 'not found' });
       return version;
+    });
+
+    app.post('/api/definitions/:id/versions/:v/lint', async (req, reply) => {
+      const { id, v } = req.params as { id: string; v: string };
+      const version =
+        v === 'latest' ? definitions.getLatestVersion(id) : definitions.getVersion(id, Number(v));
+      if (!version) return reply.code(404).send({ error: 'not found' });
+      const report = await lint(version.xml);
+      definitions.setLintReport(version.definitionId, version.versionNo, report);
+      return report;
     });
   }
 

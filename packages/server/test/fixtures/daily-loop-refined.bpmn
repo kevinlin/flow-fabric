@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowfabric="http://flowfabric.dev/schema/1.0"
+             id="dailyLoopDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="dailyLoop" isExecutable="true">
+    <extensionElements>
+      <flowfabric:instanceInputs>
+        <flowfabric:input name="submissionDeadline" type="string" />
+      </flowfabric:instanceInputs>
+    </extensionElements>
+    <startEvent id="start" name="Daily run starts" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="checkInit" />
+    <serviceTask id="checkInit" name="Check input folder for initializer">
+      <extensionElements>
+        <flowfabric:agentTask retries="1" timeoutSeconds="120">
+          <flowfabric:prompt>Check whether the workspace Input folder contains an initializer file.</flowfabric:prompt>
+          <flowfabric:tools>Read,Glob</flowfabric:tools>
+          <flowfabric:outputSchema>{"type":"object","required":["containsInitializer"],"properties":{"containsInitializer":{"type":"boolean"}},"additionalProperties":true}</flowfabric:outputSchema>
+        </flowfabric:agentTask>
+      </extensionElements>
+    </serviceTask>
+    <sequenceFlow id="f2" sourceRef="checkInit" targetRef="gwInit" />
+    <exclusiveGateway id="gwInit" name="Contains initializer?" default="toAudit" />
+    <sequenceFlow id="toInit" sourceRef="gwInit" targetRef="provideDeadline">
+      <conditionExpression xsi:type="tFormalExpression" language="javascript"><![CDATA[
+        const environment = this.environment; next(null, Boolean(environment.variables.containsInitializer === false));
+      ]]></conditionExpression>
+    </sequenceFlow>
+    <userTask id="provideDeadline" name="Provide submission deadline">
+      <extensionElements>
+        <flowfabric:userTask>
+          <flowfabric:formSchema>{"type":"object","required":["submissionDeadline"],"properties":{"submissionDeadline":{"type":"string"}},"additionalProperties":false}</flowfabric:formSchema>
+        </flowfabric:userTask>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="f3" sourceRef="provideDeadline" targetRef="updateTracker" />
+    <scriptTask id="updateTracker" name="Update tracker with deadline">
+      <extensionElements>
+        <flowfabric:codeTask command="node -e &quot;console.log(JSON.stringify({trackerUpdated:true}))&quot;" retries="1" timeoutSeconds="30">
+          <flowfabric:input name="submissionDeadline" type="string" />
+          <flowfabric:outputSchema>{"type":"object","required":["trackerUpdated"],"properties":{"trackerUpdated":{"type":"boolean"}},"additionalProperties":true}</flowfabric:outputSchema>
+        </flowfabric:codeTask>
+      </extensionElements>
+    </scriptTask>
+    <sequenceFlow id="f4" sourceRef="updateTracker" targetRef="endInit" />
+    <endEvent id="endInit" name="Initialisation complete">
+      <terminateEventDefinition />
+    </endEvent>
+    <sequenceFlow id="toAudit" sourceRef="gwInit" targetRef="auditTracker" />
+    <serviceTask id="auditTracker" name="Audit tracker for at-risk tasks">
+      <extensionElements>
+        <flowfabric:agentTask retries="1" timeoutSeconds="300">
+          <flowfabric:prompt>Audit the project tracker; flag tasks at risk against the submission deadline.</flowfabric:prompt>
+          <flowfabric:tools>Read,Grep,Glob</flowfabric:tools>
+          <flowfabric:boundaries>Never modify files outside the tracker folder.</flowfabric:boundaries>
+          <flowfabric:input name="submissionDeadline" type="string" />
+          <flowfabric:outputSchema>{"type":"object","required":["atRiskTasks"],"properties":{"atRiskTasks":{"type":"array","items":{"type":"string"}}},"additionalProperties":true}</flowfabric:outputSchema>
+        </flowfabric:agentTask>
+      </extensionElements>
+    </serviceTask>
+    <sequenceFlow id="f5" sourceRef="auditTracker" targetRef="reviewCycle" />
+    <userTask id="reviewCycle" name="Review daily result">
+      <extensionElements>
+        <flowfabric:userTask>
+          <flowfabric:formSchema>{"type":"object","required":["continueLoop"],"properties":{"continueLoop":{"type":"boolean"}},"additionalProperties":false}</flowfabric:formSchema>
+        </flowfabric:userTask>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="f6" sourceRef="reviewCycle" targetRef="gwLoop" />
+    <exclusiveGateway id="gwLoop" name="Run another cycle?" default="toDone" />
+    <sequenceFlow id="toWait" sourceRef="gwLoop" targetRef="wait24h">
+      <conditionExpression xsi:type="tFormalExpression" language="javascript"><![CDATA[
+        const environment = this.environment; next(null, Boolean(environment.variables.continueLoop === true));
+      ]]></conditionExpression>
+    </sequenceFlow>
+    <intermediateCatchEvent id="wait24h" name="Wait for next cycle">
+      <timerEventDefinition>
+        <timeDuration xsi:type="tFormalExpression">PT2S</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="f7" sourceRef="wait24h" targetRef="auditTracker" />
+    <sequenceFlow id="toDone" sourceRef="gwLoop" targetRef="endDone" />
+    <endEvent id="endDone" name="Daily run complete" />
+  </process>
+</definitions>

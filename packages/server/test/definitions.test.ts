@@ -103,4 +103,16 @@ describe('definitions API', () => {
     const missing = await app.inject({ method: 'GET', url: `/api/definitions/${id}/versions/9` });
     expect(missing.statusCode).toBe(404);
   });
+
+  it('lints a version on demand and stores the report', async () => {
+    const { app, definitions } = build();
+    const messy = readFileSync(new URL('./fixtures/messy.bpmn', import.meta.url), 'utf8');
+    const { id } = (await app.inject({
+      method: 'POST', url: '/api/definitions', payload: { name: 'messy', xml: messy },
+    })).json();
+    const res = await app.inject({ method: 'POST', url: `/api/definitions/${id}/versions/1/lint` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().deployable).toBe(false);
+    expect(definitions.getVersion(id, 1)?.lintReport?.errorCount).toBeGreaterThan(0);
+  });
 });

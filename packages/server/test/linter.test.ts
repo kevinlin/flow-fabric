@@ -1,10 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { LINT_RULES, type LintReport } from '@flowfabric/shared';
 import { lint } from '../src/linter/lint.js';
 
 const messy = readFileSync(new URL('./fixtures/messy.bpmn', import.meta.url), 'utf8');
 const contracts = readFileSync(new URL('./fixtures/contracts.bpmn', import.meta.url), 'utf8');
+const refined = readFileSync(new URL('./fixtures/daily-loop-refined.bpmn', import.meta.url), 'utf8');
+const RFP_PATH = new URL('../../../Input/bpmn/rfp-daily-routine.bpmn', import.meta.url);
+const INTERVIEW_PATH = new URL('../../../Input/bpmn/interview-process.bpmn', import.meta.url);
 
 const HEAD = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -136,5 +139,140 @@ describe('lint rule 3 — gateway conditions (FF003)', () => {
       <sequenceFlow id="f2" sourceRef="join" targetRef="end" />
       <endEvent id="end" />`));
     expect(byRule(report, LINT_RULES.UNEVALUABLE_CONDITION)).toEqual([]);
+  });
+});
+
+describe('lint rule 4 — undeclared variables (FF004)', () => {
+  it('flags an input no upstream task produces and no instance input declares', async () => {
+    const report = await lint(wrap(`
+      <startEvent id="start" />
+      <sequenceFlow id="f1" sourceRef="start" targetRef="svc" />
+      <serviceTask id="svc">
+        <extensionElements>
+          <flowfabric:agentTask>
+            <flowfabric:prompt>audit</flowfabric:prompt>
+            <flowfabric:input name="deadline" type="string" />
+            <flowfabric:outputSchema>{"type":"object","properties":{"ok":{"type":"boolean"}}}</flowfabric:outputSchema>
+          </flowfabric:agentTask>
+        </extensionElements>
+      </serviceTask>
+      <sequenceFlow id="f2" sourceRef="svc" targetRef="end" />
+      <endEvent id="end" />`));
+    const found = byRule(report, LINT_RULES.UNDECLARED_VARIABLE);
+    expect(found.map((f) => f.nodeId)).toContain('svc');
+    expect(found[0].message).toContain('deadline');
+  });
+
+  it('accepts variables produced upstream, declared as instance inputs, or referenced by conditions', async () => {
+    const report = await lint(wrap(`
+      <extensionElements>
+        <flowfabric:instanceInputs><flowfabric:input name="deadline" type="string" /></flowfabric:instanceInputs>
+      </extensionElements>
+      <startEvent id="start" />
+      <sequenceFlow id="f1" sourceRef="start" targetRef="svc" />
+      <serviceTask id="svc">
+        <extensionElements>
+          <flowfabric:agentTask>
+            <flowfabric:prompt>audit</flowfabric:prompt>
+            <flowfabric:input name="deadline" type="string" />
+            <flowfabric:outputSchema>{"type":"object","properties":{"atRisk":{"type":"boolean"}}}</flowfabric:outputSchema>
+          </flowfabric:agentTask>
+        </extensionElements>
+      </serviceTask>
+      <sequenceFlow id="f2" sourceRef="svc" targetRef="gw" />
+      <exclusiveGateway id="gw" default="toB" />
+      <sequenceFlow id="toA" sourceRef="gw" targetRef="endA">
+        <conditionExpression xsi:type="tFormalExpression" language="javascript">
+          const environment = this.environment; next(null, Boolean(environment.variables.atRisk === true));
+        </conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="toB" sourceRef="gw" targetRef="endB" />
+      <endEvent id="endA" /><endEvent id="endB" />`));
+    expect(byRule(report, LINT_RULES.UNDECLARED_VARIABLE)).toEqual([]);
+  });
+
+  it('flags a condition variable produced only downstream of the gateway', async () => {
+    const report = await lint(wrap(`
+      <startEvent id="start" />
+      <sequenceFlow id="f1" sourceRef="start" targetRef="gw" />
+      <exclusiveGateway id="gw" default="toB" />
+      <sequenceFlow id="toA" sourceRef="gw" targetRef="svc">
+        <conditionExpression xsi:type="tFormalExpression" language="javascript">
+          const environment = this.environment; next(null, Boolean(environment.variables.atRisk === true));
+        </conditionExpression>
+      </sequenceFlow>
+      <serviceTask id="svc">
+        <extensionElements>
+          <flowfabric:agentTask>
+            <flowfabric:prompt>audit</flowfabric:prompt>
+            <flowfabric:outputSchema>{"type":"object","properties":{"atRisk":{"type":"boolean"}}}</flowfabric:outputSchema>
+          </flowfabric:agentTask>
+        </extensionElements>
+      </serviceTask>
+      <sequenceFlow id="f2" sourceRef="svc" targetRef="endA" />
+      <sequenceFlow id="toB" sourceRef="gw" targetRef="endB" />
+      <endEvent id="endA" /><endEvent id="endB" />`));
+    expect(byRule(report, LINT_RULES.UNDECLARED_VARIABLE).map((f) => f.nodeId)).toContain('gw');
+  });
+});
+
+describe('lint rule 5 — orphan nodes (FF005)', () => {
+  it('flags nodes unreachable from the start event', async () => {
+    const report = await lint(wrap(`
+      <startEvent id="start" />
+      <sequenceFlow id="f1" sourceRef="start" targetRef="end" />
+      <endEvent id="end" />
+      <userTask id="orphan" name="Old step">
+        <extensionElements>
+          <flowfabric:userTask><flowfabric:formSchema>{"type":"object"}</flowfabric:formSchema></flowfabric:userTask>
+        </extensionElements>
+      </userTask>`));
+    expect(byRule(report, LINT_RULES.ORPHAN_NODE).map((f) => f.nodeId)).toEqual(['orphan']);
+  });
+
+  it('treats boundary events and their handler paths as reachable', async () => {
+    const report = await lint(contracts.replace(
+      '<endEvent id="end" />',
+      `<endEvent id="end" />
+       <boundaryEvent id="guard" attachedToRef="agentTask"><errorEventDefinition /></boundaryEvent>
+       <sequenceFlow id="fErr" sourceRef="guard" targetRef="endErr" />
+       <endEvent id="endErr" />`,
+    ));
+    expect(byRule(report, LINT_RULES.ORPHAN_NODE)).toEqual([]);
+  });
+});
+
+describe('lint rule 6 — instruction-bearing labels (FF006)', () => {
+  it('warns on "do not re-run" / "ends here" labels without blocking deployment', async () => {
+    const report = await lint(messy);
+    const found = byRule(report, LINT_RULES.INSTRUCTION_LABEL);
+    expect(found.map((f) => f.nodeId)).toContain('endStop');
+    expect(found.every((f) => f.severity === 'warning')).toBe(true);
+  });
+});
+
+describe('lint verdicts on whole files (impl M3.2 verify)', () => {
+  it('hand-refined daily-loop fixture is deployable', async () => {
+    const report = await lint(refined);
+    expect(report.findings.filter((f) => f.severity === 'error')).toEqual([]);
+    expect(report.deployable).toBe(true);
+  });
+
+  it.skipIf(!existsSync(RFP_PATH))('raw rfp-daily fails with generic-task, condition, and label findings', async () => {
+    const report = await lint(readFileSync(RFP_PATH, 'utf8'));
+    expect(report.deployable).toBe(false);
+    const rules = new Set(report.findings.map((f) => f.rule));
+    expect(rules).toContain(LINT_RULES.UNSUPPORTED_ELEMENT);   // 19 generic <task> elements
+    expect(rules).toContain(LINT_RULES.UNEVALUABLE_CONDITION); // prose gateway labels ("Yes"/"No")
+    expect(rules).toContain(LINT_RULES.INSTRUCTION_LABEL);     // "Task Ends Here Do No Re-Run"
+  });
+
+  it.skipIf(!existsSync(INTERVIEW_PATH))('interview-process lints: no unsupported elements, but contracts and conditions missing', async () => {
+    const report = await lint(readFileSync(INTERVIEW_PATH, 'utf8'));
+    expect(report.deployable).toBe(false);
+    const rules = new Set(report.findings.map((f) => f.rule));
+    expect(rules).toContain(LINT_RULES.MISSING_CONTRACT);      // 13 userTasks without formSchema
+    expect(rules).toContain(LINT_RULES.UNEVALUABLE_CONDITION); // 6 gateways without conditions
+    expect(byRule(report, LINT_RULES.UNSUPPORTED_ELEMENT)).toEqual([]); // userTasks + terminate ends are profile elements
   });
 });
