@@ -14,8 +14,8 @@ Navigation map of all specification documents.
 
 | Milestone | Plan | Status |
 |---|---|---|
-| M1 — Engine spike | [plan_m1-engine-spike.md](plan_m1-engine-spike.md) | Done (GO) |
-| M2 — Runners + failure ladder | [plan_m2-runners-failure-ladder.md](plan_m2-runners-failure-ladder.md) | Done (compacted) |
-| M3 — Intake | TBD | Not started |
+| M1 — Engine spike | [plan_m1-engine-spike.md](plan_m1-engine-spike.md) | Done |
+| M2 — Runners + failure ladder | [plan_m2-runners-failure-ladder.md](plan_m2-runners-failure-ladder.md) | Done |
+| M3 — Intake | [plan_m3-intake.md](plan_m3-intake.md) | Done |
 | M4 — Web UI | TBD | Not started |
 | M5 — OTel + soak | TBD | Not started |
