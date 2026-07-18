@@ -26,7 +26,7 @@ Alternatives considered:
 | HTTP | Fastify: REST + SSE, serves built SPA |
 | Storage | SQLite via `better-sqlite3`, WAL mode, in `~/.flow-fabric/` |
 | Schema validation | Ajv (task output contracts are JSON Schema) |
-| Agent runtime | Claude Agent SDK, headless, one fresh session per task |
+| Agent runtime | Claude Agent SDK, headless, one fresh session per task. Endpoint/model/key via `ANTHROPIC_BASE_URL` / `ANTHROPIC_MODEL` / `ANTHROPIC_API_KEY` env vars (git-ignored `.env`), so any Claude-compatible API works (e.g. DeepSeek) |
 | Frontend | React + Vite, `bpmn-js` for render/overlay |
 | Telemetry | OpenTelemetry SDK, OTLP exporter (config-gated) |
 | Notifier | macOS notifications: `terminal-notifier`, `osascript` fallback |
@@ -135,7 +135,7 @@ Principles:
 
 Runner specifics:
 
-- **Agent**: fresh headless Claude Agent SDK session, `cwd` = workspace, allowed tools from contract, prompt = contract prompt + boundaries + serialized inputs. Must end with JSON matching the output schema (extracted from the final message; retry within the same attempt once on parse failure). Stateless between tasks (FR-11).
+- **Agent**: fresh headless Claude Agent SDK session, `cwd` = workspace, allowed tools from contract, prompt = contract prompt + boundaries + serialized inputs. The SDK inherits `ANTHROPIC_*` env vars from the daemon, which loads them from `.env` at boot — model and endpoint are deployment config, not per-task contract fields. Must end with JSON matching the output schema (extracted from the final message; retry within the same attempt once on parse failure). Stateless between tasks (FR-11).
 - **Code**: spawn declared command in workspace; inputs as env vars (`FF_VAR_*`) and JSON on stdin; stdout parsed as JSON output (FR-12).
 - **User**: create `user_tasks` row, render form from formSchema in inbox, fire notifier. Submission validates against schema, writes vars, resumes token (FR-13).
 - **Stub** (dry-run): generates schema-conforming fake output (`json-schema-faker`-style derivation), optional per-node override values supplied at instance start. Applies to agent + code tasks; user tasks stay real so the human steers gateway paths cheaply.

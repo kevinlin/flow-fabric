@@ -4,7 +4,7 @@
 
 **Goal:** Prove `bpmn-engine` supports durable resume and timer persistence (PRD risk #1) via a walking skeleton: engine embedded, SQLite persistence, kill-and-resume, loop timers across restart. Go/no-go gate for the rest of Flow Fabric.
 
-**Architecture:** pnpm monorepo; `packages/server` hosts a minimal `engine-host` module (`InstanceStore` for SQLite persistence, `EngineHost` wrapping `bpmn-engine`). State snapshot after every activity transition; boot-time `resumeAll()` recovers non-terminal instances. Spec: [impl_flow-fabric.md](../specs/impl_flow-fabric.md) M1, [design_flow-fabric.md](../specs/design_flow-fabric.md) §6.2.
+**Architecture:** pnpm monorepo; `packages/server` hosts a minimal `engine-host` module (`InstanceStore` for SQLite persistence, `EngineHost` wrapping `bpmn-engine`). State snapshot after every activity transition; boot-time `resumeAll()` recovers non-terminal instances. Spec: [impl_flow-fabric.md](impl_flow-fabric.md) M1, [design_flow-fabric.md](design_flow-fabric.md) §6.2.
 
 **Tech Stack:** Node 22, TypeScript (strict, ESM), pnpm workspaces, `bpmn-engine` ^25, `better-sqlite3` ^12, vitest ^3, tsx ^4.
 
@@ -15,6 +15,7 @@
 - Test databases go in `fs.mkdtempSync(path.join(os.tmpdir(), 'ff-spike-'))`, never in the repo.
 - Workflow fixtures use only elements from the Flow Fabric profile (design §4.1): script tasks, exclusive gateways, timer intermediate catch events, start/end events.
 - `bpmn-engine` ships its own TypeScript types. If `tsc` reports missing declarations, add a minimal `packages/server/src/types/bpmn-engine.d.ts` with `declare module 'bpmn-engine';` — do not install `@types/bpmn-engine` (doesn't exist).
+- Claude Agent SDK configuration comes from environment variables only: `ANTHROPIC_API_KEY`, plus optional `ANTHROPIC_BASE_URL` and `ANTHROPIC_MODEL` for Claude-compatible APIs (e.g. DeepSeek's Anthropic endpoint). The daemon loads them from a git-ignored `.env` at the repo root; `.env.example` documents them. M1 never calls the SDK — the scaffold just puts the convention in place for M2's agent runner.
 - Timer tests assert wall-clock windows with ±1.5 s slack; vitest `testTimeout: 20000`.
 
 ---
@@ -26,6 +27,7 @@
 - Create: `packages/server/package.json`, `packages/server/tsconfig.json`, `packages/server/vitest.config.ts`, `packages/server/src/index.ts`, `packages/server/test/smoke.test.ts`
 - Create: `packages/shared/package.json`, `packages/shared/tsconfig.json`, `packages/shared/src/index.ts`
 - Create: `packages/web/package.json` (placeholder)
+- Create: `.env.example`
 - Modify: `.gitignore`
 
 **Interfaces:**
@@ -70,6 +72,14 @@ packages:
     "sourceMap": true
   }
 }
+```
+
+`.env.example` (`.env` itself is already gitignored; the SDK reads these vars at M2 — any Claude-compatible endpoint works):
+
+```
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_MODEL=deepseek-v4-flash
+ANTHROPIC_API_KEY=sk-xxx
 ```
 
 Append to `.gitignore`:

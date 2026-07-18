@@ -34,7 +34,7 @@ Goal: three actors + stub execute real task contracts; failures escalate per FR-
    - Verify: dry-run instance of test BPMN completes end-to-end.
 3. **Code runner**: spawn command in workspace, `FF_VAR_*` env + stdin JSON, stdout JSON validated with Ajv.
    - Verify: contract tests for success, bad JSON, non-zero exit, timeout.
-4. **Agent runner**: headless Claude Agent SDK session, cwd = workspace, tools from contract, output JSON extracted and validated; token usage + transcript path recorded.
+4. **Agent runner**: headless Claude Agent SDK session, cwd = workspace, tools from contract, output JSON extracted and validated; token usage + transcript path recorded. SDK endpoint/model/key from `ANTHROPIC_BASE_URL` / `ANTHROPIC_MODEL` / `ANTHROPIC_API_KEY` env vars (`.env`), supporting Claude-compatible APIs.
    - Verify: contract test against mock transport; one live smoke test against a scratch workspace.
 5. **User task service**: `user_tasks` rows, submit API writes vars and resumes token; macOS notifier fires on creation.
    - Verify: integration test (notifier mocked); manual notification check.
