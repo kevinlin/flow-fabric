@@ -27,6 +27,7 @@ dist/
 
 # Worktrees
 .worktrees/
+
 # Node
 node_modules/
 *.tsbuildinfo
