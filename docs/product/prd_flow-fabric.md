@@ -151,5 +151,5 @@ V1 has one user: an engineer (the author) running their own ADWs locally, 24/7. 
 ## 10. References
 
 - `docs/product/forget-loop-engineering-indydevdan.md` — ADW / Software Factory framing, three actors, design principles.
-- `docs/product/rfp-daily-routine.bpmn` — flagship workflow (Signavio export, to be refined into the profile).
-- `docs/product/interview-process.bpmn` — intake/refinement generality test case.
+- `Input/bpmn/rfp-daily-routine.bpmn` — flagship workflow (Signavio export, to be refined into the profile).
+- `Input/bpmn/interview-process.bpmn` — intake/refinement generality test case.
