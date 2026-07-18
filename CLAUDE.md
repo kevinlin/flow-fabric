@@ -8,12 +8,18 @@ Flow Fabric is a local, web-based control plane for AI Developer Workflows (ADWs
 
 ## Current state — read this first
 
-The repo is at **M1 only** (engine spike / walking skeleton). The design describes a full system, but almost none of it is built yet.
+**M1 and M2 are built; M3–M5 are not.** The design describes a full system; the intake/refinement half and the UI don't exist yet.
 
-- Real code that exists: `packages/server/src/engine-host/` (`EngineHost` + `InstanceStore`) and its tests. That's it.
-- `packages/shared/src/index.ts` and `packages/web` are empty placeholders (`export {}` / echo scripts) until M2 and M4.
-- Modules named in the design (`definitions`, `linter`, `patch-ops`, `grill`, `runners`, `failure`, `events`, `inbox`, `notify`, the REST/SSE API, the SPA) are **spec, not code**. Don't assume they exist.
-- M1's go/no-go gate on `bpmn-engine` passed (verdict GO). M2 (runners + failure ladder) is the next milestone and does not have code yet.
+Built (`packages/server/src/`, all exercised through tests — [index.ts](packages/server/src/index.ts) is the public surface):
+- `engine-host/` — `EngineHost` + `InstanceStore` (M1), plus `dispatch` (runner wiring into bpmn-engine) and `failure` (the ladder) from M2.
+- `runners/` — `TaskRunner` interface, `StubRunner` (dry-run), `CodeRunner`, `AgentRunner` (Claude Agent SDK), Ajv `validateOutput`.
+- `profile/read.ts` — reads task contracts out of a BPMN's `flowfabric` extension elements into a `ProcessProfile`.
+- `inbox/`, `notify/` — user-task inbox + macOS notifier. `api/server.ts` — Fastify REST + SSE.
+- `packages/shared/src/` — profile types + moddle descriptor (`flowfabricModdle`). No longer a placeholder.
+
+Not built (still spec — don't assume they exist): the whole intake/refinement path — `definitions` (version store), `linter`, `patch-ops`, `grill` (M3) — plus OTel/soak (M5). `packages/web` is still an echo-script placeholder until M4.
+
+**No daemon entrypoint yet.** There's no `dev`/`start` script and nothing calls `buildApi().listen()` or `resumeAll()` at boot. The modules are libraries wired together only inside tests. M1's go/no-go gate on `bpmn-engine` passed (verdict GO).
 
 ## Commands
 
@@ -28,29 +34,43 @@ pnpm --filter @flowfabric/server test     # one package
 pnpm --filter @flowfabric/server test resume   # one test file by name substring (vitest filter)
 
 # run a spike probe script (tsx, not a unit test)
-cd packages/server && node --import tsx scripts/probe-timecycle.ts
+cd packages/server && node --import tsx scripts/probe-timecycle.ts   # also: probe-dispatch.ts
 ```
 
-Test files: `packages/server/test/{smoke,engine-basics,persistence,resume,loop}.test.ts`, fixtures in `test/fixtures/*.bpmn`.
+Test files: `packages/server/test/*.test.ts` — M1 engine (`smoke`, `engine-basics`, `persistence`, `resume`, `loop`) and M2 (`profile-read`, `stub-runner`, `code-runner`, `agent-runner`, `dispatch`, `failure-ladder`, `user-tasks`, `timeline`, `api`). Fixtures in `test/fixtures/*.bpmn`. `AgentRunner` tests inject a mock `AgentQueryFn` — no live SDK calls.
 
 ## Architecture
 
 Target shape (design): modular monolith, one Node daemon hosting the BPMN engine, scheduler, REST + SSE API, and serving the built SPA. Module boundaries are internal packages, not processes.
 
 Monorepo (`packages/*`):
-- `shared/` — profile types, moddle descriptor, lint rule IDs, event types (empty until M2)
+- `shared/` — profile types + moddle descriptor (built); lint rule IDs still to come in M3
 - `server/` — the daemon and all backend modules
 - `web/` — React + Vite SPA (placeholder until M4)
 
 Control-plane state lives in `~/.flow-fabric/` (SQLite + agent transcripts + definition versions). The workspace is pure workload — the platform never writes its own state there.
 
-### engine-host (the only built module)
+### engine-host — durable state (FR-9)
 
-`EngineHost` ([packages/server/src/engine-host/engine-host.ts](packages/server/src/engine-host/engine-host.ts)) wraps `bpmn-engine`; `InstanceStore` ([packages/server/src/engine-host/store.ts](packages/server/src/engine-host/store.ts)) is SQLite persistence (WAL) plus an append-only `events` log.
+`EngineHost` ([packages/server/src/engine-host/engine-host.ts](packages/server/src/engine-host/engine-host.ts)) wraps `bpmn-engine`; `InstanceStore` ([packages/server/src/engine-host/store.ts](packages/server/src/engine-host/store.ts)) is SQLite persistence (WAL) plus an append-only `events` log, and now also holds `user_tasks`, `task_executions`, and `incidents`. A partial unique index (`one_active_per_workspace`) enforces one live instance per workspace (FR-10) — a second `start()` on the same workspace throws `UNIQUE constraint failed`, which the API maps to 409.
 
 Durability is the core bet (FR-9). The mechanism:
 - On every activity transition (`activity.start` / `activity.end` / `activity.wait` / `activity.timer`), `EngineHost` appends an event and re-serializes `engine.getState()` into `instances.engine_state`.
 - On boot, `resumeAll()` loads non-terminal instances, rebuilds each engine with `new Engine().recover(state)`, and resumes. In-flight timers fire at their **originally scheduled** time, not reset — this is what makes 24/7 operation and multi-day timer loops safe.
+
+### How a task actually runs (M2 — dispatch + failure)
+
+bpmn-engine doesn't know about agents or contracts. `createDispatch` ([dispatch.ts](packages/server/src/engine-host/dispatch.ts)) hooks the engine at two seams (found in the M2 dispatch spike):
+- **`extensions`** — intercepts `ServiceTask` execution, swapping in a `Service` factory that calls the agent runner and merges its output into `activity.environment.variables`.
+- **`scripts`** — `ScriptTask`s with a code contract go to the code runner; inline `<script>` bodies and JS gateway `conditionExpression`s compile to a `Function` with bpmn-engine's default `this`=scope / `next(err, result)` semantics.
+
+Every task goes through a `RunTaskFn` seam:
+- `makeSingleAttemptRunTask` — one attempt, timeout via `AbortController` (`contract.timeoutSeconds`), records one `task_executions` row per attempt (inputs/output/status/timing/token usage/cost/transcript path — FR-14).
+- `makeLadderRunTask` ([failure.ts](packages/server/src/engine-host/failure.ts)) wraps it with the **failure ladder** (FR-18), and `EngineHost` always installs the ladder — including the dry-run stub path, so incidents work in dry runs. Rungs: retry (`contract.retries + 1` attempts) → **modeled error boundary** (if the node has one, reject and let the engine route the token) → **incident** (persist row, set status `incident`, notify, and **pause the token by leaving the runTask promise pending**). The pending resolver lives in the `holds` map keyed `${instanceId}:${nodeId}`; `resolveIncident(id, 'retry'|'skip'|'abort', output?)` releases or aborts it. On restart, an open incident re-holds without re-running or re-notifying.
+
+**User tasks (inbox):** a `userTask` emits `activity.wait` → `onUserTaskWait` → `Inbox` ([inbox.ts](packages/server/src/inbox/inbox.ts)) creates a `user_tasks` row and notifies. `submit` validates vars against the contract's `formSchema` (FR-13), then `EngineHost.signal()` merges vars into process variables and releases the token. Idempotent across resumes (dedupes on a pending row).
+
+**API surface** ([api/server.ts](packages/server/src/api/server.ts), Fastify): `POST /api/instances` (start; 409 on workspace lock), `GET /api/instances[/:id]` (instance + timeline + events), `POST /api/instances/:id/abort`, `GET /api/inbox`, `POST /api/user-tasks/:id/submit`, `POST /api/incidents/:id/resolve`, and `GET /api/events` (SSE, fanned out from `InstanceStore.onEvent`).
 
 ## bpmn-engine gotchas (from the M1 spike — see [plan_m1-engine-spike.md § Spike Findings](docs/specs/plan_m1-engine-spike.md#spike-findings))
 
@@ -77,7 +97,7 @@ These are load-bearing and easy to get wrong:
 
 ## Agent runtime config
 
-The Claude Agent SDK (M2 onward) is configured by env vars only: `ANTHROPIC_API_KEY`, plus optional `ANTHROPIC_BASE_URL` and `ANTHROPIC_MODEL` for Claude-compatible endpoints (e.g. DeepSeek's Anthropic API). The daemon loads them from a git-ignored `.env`; see [.env.example](.env.example). M1 never calls the SDK. Model/endpoint are deployment config, not per-task contract fields.
+`AgentRunner` ([runners/agent.ts](packages/server/src/runners/agent.ts)) calls `query()` from `@anthropic-ai/claude-agent-sdk` headless: `cwd`=workspace, `allowedTools` from the contract, `permissionMode: 'bypassPermissions'`, `settingSources: []`. It appends the message stream to a per-attempt transcript (`<dataDir>/transcripts/<instanceId>/<nodeId>.<attempt>.jsonl`), extracts the trailing JSON object, and does one in-session resume-and-retry if the first reply isn't valid JSON. The SDK reads env vars only: `ANTHROPIC_API_KEY`, plus optional `ANTHROPIC_BASE_URL` and `ANTHROPIC_MODEL` for Claude-compatible endpoints (e.g. DeepSeek's Anthropic API), loaded from a git-ignored `.env` (see [.env.example](.env.example)). Model/endpoint are deployment config, not per-task contract fields. Dry runs use `StubRunner` and never touch the SDK; the runner is injected via `EngineHostOptions.runners`, so tests pass a mock.
 
 ## Docs map
 
@@ -87,5 +107,6 @@ Read the spec before extending anything — most of the system is designed but u
 - [docs/specs/design_flow-fabric.md](docs/specs/design_flow-fabric.md) — approved design: modules, profile, data model, execution semantics, failure ladder
 - [docs/specs/impl_flow-fabric.md](docs/specs/impl_flow-fabric.md) — five milestones (M1–M5), each with a verification gate
 - [docs/specs/plan_m1-engine-spike.md](docs/specs/plan_m1-engine-spike.md) — M1 plan (done, compacted) + spike findings + GO verdict
+- [docs/specs/plan_m2-runners-failure-ladder.md](docs/specs/plan_m2-runners-failure-ladder.md) — M2 plan (done, compacted) + dispatch spike findings
 
 `Input/` and `Output/` are git-ignored. The two real BPMN files (`Input/bpmn/rfp-daily-routine.bpmn`, the flagship Signavio export, and `interview-process.bpmn`, the intake generality case) live locally but aren't tracked.
