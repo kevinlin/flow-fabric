@@ -92,7 +92,7 @@ Namespace: `http://flowfabric.dev/schema/1.0`. Contracts live in `bpmn:extension
 
 - `scriptTask` → `<flowfabric:codeTask command="..." retries timeoutSeconds>` + inputs + `outputSchema`.
 - `userTask` → `<flowfabric:userTask>` + `<flowfabric:formSchema>` (JSON Schema; the inbox renders the form from it).
-- Gateway conditions: standard `bpmn:conditionExpression` with `${...}` expressions over process variables only (bpmn-engine native format), e.g. `${environment.variables.deadlinePassed === true}`. Default flow marks the fallback path.
+- Gateway conditions: `bpmn:conditionExpression` with `language="javascript"` and `next(null, <bool>)` semantics over process variables, e.g. `const environment = this.environment; next(null, Boolean(environment.variables.deadlinePassed === true));`. Default flow marks the fallback path. **M3 amendment** (same pattern as §4.1's M1 `timeCycle` finding, see [plan_m3-intake.md](plan_m3-intake.md)): the original `${...}` expression format is not used. The dispatch `scripts` hook compiles every condition body with `new Function`, so a `${...}` body is a JS syntax error at registration; linter rule 3 (FF003) accepts only `language="javascript"` conditions, and the `setGatewayCondition` patch op writes them in this shape.
 
 ### 4.3 Linter rules (deployability gate)
 

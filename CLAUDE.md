@@ -8,18 +8,22 @@ Flow Fabric is a local, web-based control plane for AI Developer Workflows (ADWs
 
 ## Current state — read this first
 
-**M1 and M2 are built; M3–M5 are not.** The design describes a full system; the intake/refinement half and the UI don't exist yet.
+**M1–M3 are built; M4–M5 are not.** The design describes a full system; the UI doesn't exist yet.
 
 Built (`packages/server/src/`, all exercised through tests — [index.ts](packages/server/src/index.ts) is the public surface):
-- `engine-host/` — `EngineHost` + `InstanceStore` (M1), plus `dispatch` (runner wiring into bpmn-engine) and `failure` (the ladder) from M2.
+- `engine-host/` — `EngineHost` + `InstanceStore` (M1), plus `dispatch` (runner wiring into bpmn-engine) and `failure` (the ladder) from M2. Instance status gained `terminated` (M3) for terminate end events.
 - `runners/` — `TaskRunner` interface, `StubRunner` (dry-run), `CodeRunner`, `AgentRunner` (Claude Agent SDK), Ajv `validateOutput`.
-- `profile/read.ts` — reads task contracts out of a BPMN's `flowfabric` extension elements into a `ProcessProfile`.
-- `inbox/`, `notify/` — user-task inbox + macOS notifier. `api/server.ts` — Fastify REST + SSE.
-- `packages/shared/src/` — profile types + moddle descriptor (`flowfabricModdle`). No longer a placeholder.
+- `profile/read.ts` — reads task contracts, `instanceInputs`, and terminate-end ids out of a BPMN's `flowfabric` extension elements into a `ProcessProfile`.
+- `definitions/` — `DefinitionStore`: immutable BPMN versions + deployable flag (M3).
+- `linter/` — pure `lint(xml)` deployability gate, rules FF001–FF006 (M3, design §4.3).
+- `patch-ops/` — `applyPatchOps`: typed moddle edits that never touch DI (M3, design §7.3).
+- `grill/` — `GrillHost`/`GrillSession`: Claude Agent SDK chat whose only mutating tool is `propose_patch_ops`, with a re-lint feedback loop (M3).
+- `inbox/`, `notify/` — user-task inbox + macOS notifier. `api/server.ts` — Fastify REST + SSE. `daemon.ts` — the process entrypoint.
+- `packages/shared/src/` — profile types, moddle descriptor (`flowfabricModdle`), lint rule ids/types.
 
-Not built (still spec — don't assume they exist): the whole intake/refinement path — `definitions` (version store), `linter`, `patch-ops`, `grill` (M3) — plus OTel/soak (M5). `packages/web` is still an echo-script placeholder until M4.
+Not built (still spec — don't assume they exist): OTel/soak (M5). `packages/web` is still an echo-script placeholder until M4.
 
-**No daemon entrypoint yet.** There's no `dev`/`start` script and nothing calls `buildApi().listen()` or `resumeAll()` at boot. The modules are libraries wired together only inside tests. M1's go/no-go gate on `bpmn-engine` passed (verdict GO).
+**Daemon entrypoint:** `pnpm --filter @flowfabric/server dev` boots [daemon.ts](packages/server/src/daemon.ts) — wires store + host + inbox + notifier + definitions + grill + API, calls `resumeAll()`, and listens on `FF_PORT` (default 4400), data dir `FF_DATA_DIR` (default `~/.flow-fabric`). M1's go/no-go gate on `bpmn-engine` passed (verdict GO).
 
 ## Commands
 
