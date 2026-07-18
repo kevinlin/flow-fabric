@@ -34,6 +34,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
     };
     let name = body.name ?? 'instance';
     let source = body.source;
+    let definitionId: string | undefined;
+    let versionNo: number | undefined;
     if (body.definitionId) {
       if (!definitions) return reply.code(400).send({ error: 'no definition store configured' });
       const version = body.version !== undefined
@@ -43,6 +45,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
       if (!version.deployable) {
         return reply.code(400).send({ error: `version ${version.versionNo} is not deployable; lint it clean first (FR-3)` });
       }
+      definitionId = body.definitionId;
+      versionNo = version.versionNo;
       source = version.xml;
       name = definitions.getDefinition(body.definitionId)?.name ?? name;
     }
@@ -59,6 +63,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
         variables: body.inputs,
         dryRun: body.dryRun,
         stubOverrides: body.stubOverrides,
+        definitionId,
+        versionNo,
       });
       completion.catch((err) => app.log.error({ err, id }, 'instance failed'));
     } catch (err) {

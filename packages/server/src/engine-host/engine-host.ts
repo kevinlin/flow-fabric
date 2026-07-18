@@ -67,11 +67,15 @@ export class EngineHost {
     variables?: Record<string, unknown>;
     dryRun?: boolean;
     stubOverrides?: Record<string, Record<string, unknown>>;
+    definitionId?: string;
+    versionNo?: number;
   }): Promise<void> {
     this.store.createInstance(opts.id, opts.name, opts.source, {
       workspace: opts.workspace,
       dryRun: opts.dryRun,
       stubOverrides: opts.stubOverrides,
+      definitionId: opts.definitionId,
+      versionNo: opts.versionNo,
     });
     return this.startEngine(opts);
   }

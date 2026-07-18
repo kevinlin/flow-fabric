@@ -19,6 +19,10 @@ export interface InstanceRow {
   workspace: string;
   dryRun: boolean;
   stubOverrides: string | null;
+  definitionId: string | null;
+  versionNo: number | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface EventRow {
@@ -66,7 +70,9 @@ export interface IncidentRow {
 }
 
 const INSTANCE_COLUMNS = `id, name, source, status, engine_state AS engineState,
-  workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides`;
+  workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides,
+  definition_id AS definitionId, version_no AS versionNo,
+  created_at AS createdAt, updated_at AS updatedAt`;
 
 const USER_TASK_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
   form_schema AS formSchema, status, submitted_vars AS submittedVars,
@@ -104,6 +110,8 @@ export class InstanceStore {
         workspace_path TEXT NOT NULL DEFAULT '',
         dry_run INTEGER NOT NULL DEFAULT 0,
         stub_overrides TEXT,
+        definition_id TEXT,
+        version_no INTEGER,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       );
@@ -156,6 +164,12 @@ export class InstanceStore {
         ON instances(workspace_path)
         WHERE status IN ('running', 'incident') AND workspace_path != '';
     `);
+    // Migration guard: DBs created before M4 lack the definition linkage columns.
+    const cols = this.db.prepare(`PRAGMA table_info(instances)`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'definition_id')) {
+      this.db.exec(`ALTER TABLE instances ADD COLUMN definition_id TEXT;
+                    ALTER TABLE instances ADD COLUMN version_no INTEGER;`);
+    }
   }
 
   createInstance(
@@ -166,14 +180,17 @@ export class InstanceStore {
       workspace?: string;
       dryRun?: boolean;
       stubOverrides?: Record<string, Record<string, unknown>>;
+      definitionId?: string;
+      versionNo?: number;
     } = {},
   ): void {
     const now = Date.now();
     this.db
       .prepare(
         `INSERT INTO instances
-           (id, name, source, status, engine_state, workspace_path, dry_run, stub_overrides, created_at, updated_at)
-         VALUES (?, ?, ?, 'running', NULL, ?, ?, ?, ?, ?)`,
+           (id, name, source, status, engine_state, workspace_path, dry_run, stub_overrides,
+            definition_id, version_no, created_at, updated_at)
+         VALUES (?, ?, ?, 'running', NULL, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -182,6 +199,8 @@ export class InstanceStore {
         opts.workspace ?? '',
         opts.dryRun ? 1 : 0,
         opts.stubOverrides ? JSON.stringify(opts.stubOverrides) : null,
+        opts.definitionId ?? null,
+        opts.versionNo ?? null,
         now,
         now,
       );
