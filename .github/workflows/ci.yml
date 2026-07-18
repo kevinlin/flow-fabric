@@ -24,4 +24,24 @@ jobs:
 
       - run: pnpm build
 
-      - run: pnpm test
+      - name: Test
+        run: |
+          pnpm --filter @flowfabric/web test
+          pnpm --filter @flowfabric/shared exec vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml
+          pnpm --filter @flowfabric/server exec vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml
+
+      - name: Publish JUnit report
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: packages/*/test-results/junit.xml
+          annotate_only: true
+          detailed_summary: true
+
+      - name: Upload JUnit results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-test-results
+          path: packages/*/test-results/junit.xml
+          if-no-files-found: warn
