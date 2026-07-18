@@ -7,11 +7,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.214",
     "@flowfabric/shared": "workspace:*",
     "ajv": "^8",
+    "better-sqlite3": "^12",
     "bpmn-engine": "^25",
-    "bpmn-moddle": "^10",
-    "better-sqlite3": "^12"
+    "bpmn-moddle": "^10"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6",
