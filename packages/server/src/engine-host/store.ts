@@ -34,6 +34,24 @@ export interface UserTaskRow {
   formSchema: string;
   status: 'pending' | 'submitted';
   submittedVars: string | null;
+  taskExecutionId: number | null;
+}
+
+export interface TaskExecutionRow {
+  id: number;
+  instanceId: string;
+  nodeId: string;
+  actor: 'agent' | 'code' | 'user';
+  attempt: number;
+  resolvedInputs: string;
+  output: string | null;
+  error: string | null;
+  status: 'running' | 'completed' | 'failed';
+  startedAt: number;
+  endedAt: number | null;
+  tokenUsage: string | null;
+  costUsd: number | null;
+  transcriptPath: string | null;
 }
 
 export interface IncidentRow {
@@ -49,7 +67,13 @@ const INSTANCE_COLUMNS = `id, name, source, status, engine_state AS engineState,
   workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides`;
 
 const USER_TASK_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
-  form_schema AS formSchema, status, submitted_vars AS submittedVars`;
+  form_schema AS formSchema, status, submitted_vars AS submittedVars,
+  task_execution_id AS taskExecutionId`;
+
+const TASK_EXECUTION_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
+  actor, attempt, resolved_inputs AS resolvedInputs, output, error, status,
+  started_at AS startedAt, ended_at AS endedAt, token_usage AS tokenUsage,
+  cost_usd AS costUsd, transcript_path AS transcriptPath`;
 
 const INCIDENT_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
   reason, status, resolution`;
@@ -94,8 +118,25 @@ export class InstanceStore {
         form_schema TEXT NOT NULL,
         status TEXT NOT NULL,
         submitted_vars TEXT,
+        task_execution_id INTEGER,
         created_at INTEGER NOT NULL,
         submitted_at INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS task_executions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        instance_id TEXT NOT NULL REFERENCES instances(id),
+        node_id TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        attempt INTEGER NOT NULL,
+        resolved_inputs TEXT NOT NULL,
+        output TEXT,
+        error TEXT,
+        status TEXT NOT NULL,
+        started_at INTEGER NOT NULL,
+        ended_at INTEGER,
+        token_usage TEXT,
+        cost_usd REAL,
+        transcript_path TEXT
       );
       CREATE TABLE IF NOT EXISTS incidents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -183,13 +224,18 @@ export class InstanceStore {
       .all(instanceId) as EventRow[];
   }
 
-  createUserTask(instanceId: string, nodeId: string, formSchema: string): number {
+  createUserTask(
+    instanceId: string,
+    nodeId: string,
+    formSchema: string,
+    taskExecutionId?: number,
+  ): number {
     const result = this.db
       .prepare(
-        `INSERT INTO user_tasks (instance_id, node_id, form_schema, status, created_at)
-         VALUES (?, ?, ?, 'pending', ?)`,
+        `INSERT INTO user_tasks (instance_id, node_id, form_schema, status, task_execution_id, created_at)
+         VALUES (?, ?, ?, 'pending', ?, ?)`,
       )
-      .run(instanceId, nodeId, formSchema, Date.now());
+      .run(instanceId, nodeId, formSchema, taskExecutionId ?? null, Date.now());
     return Number(result.lastInsertRowid);
   }
 
@@ -220,6 +266,57 @@ export class InstanceStore {
         `UPDATE user_tasks SET status = 'submitted', submitted_vars = ?, submitted_at = ? WHERE id = ?`,
       )
       .run(JSON.stringify(vars), Date.now(), id);
+  }
+
+  startTaskExecution(
+    instanceId: string,
+    nodeId: string,
+    actor: 'agent' | 'code' | 'user',
+    attempt: number,
+    inputs: Record<string, unknown>,
+  ): number {
+    const result = this.db
+      .prepare(
+        `INSERT INTO task_executions (instance_id, node_id, actor, attempt, resolved_inputs, status, started_at)
+         VALUES (?, ?, ?, ?, ?, 'running', ?)`,
+      )
+      .run(instanceId, nodeId, actor, attempt, JSON.stringify(inputs), Date.now());
+    return Number(result.lastInsertRowid);
+  }
+
+  finishTaskExecution(
+    id: number,
+    result: {
+      status: 'completed' | 'failed';
+      output?: unknown;
+      error?: string;
+      tokenUsage?: unknown;
+      costUsd?: number;
+      transcriptPath?: string;
+    },
+  ): void {
+    this.db
+      .prepare(
+        `UPDATE task_executions
+         SET status = ?, output = ?, error = ?, token_usage = ?, cost_usd = ?, transcript_path = ?, ended_at = ?
+         WHERE id = ?`,
+      )
+      .run(
+        result.status,
+        result.output === undefined ? null : JSON.stringify(result.output),
+        result.error ?? null,
+        result.tokenUsage === undefined ? null : JSON.stringify(result.tokenUsage),
+        result.costUsd ?? null,
+        result.transcriptPath ?? null,
+        Date.now(),
+        id,
+      );
+  }
+
+  listTaskExecutions(instanceId: string): TaskExecutionRow[] {
+    return this.db
+      .prepare(`SELECT ${TASK_EXECUTION_COLUMNS} FROM task_executions WHERE instance_id = ? ORDER BY id`)
+      .all(instanceId) as TaskExecutionRow[];
   }
 
   createIncident(instanceId: string, nodeId: string, reason: string): number {

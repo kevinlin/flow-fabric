@@ -1,5 +1,6 @@
 import type { AgentTaskContract, CodeTaskContract } from '@flowfabric/shared';
 import type { ProcessProfile } from '../profile/read.js';
+import type { InstanceStore } from './store.js';
 import type { TaskRunner } from '../runners/types.js';
 import { validateOutput } from '../runners/validate.js';
 
@@ -24,7 +25,9 @@ export interface DispatchDeps {
   dataDir: string;
   profile: ProcessProfile;
   runners: RunnerSet;
-  /** Overridden by the failure ladder in Task 9. Default: one attempt, validate, throw on failure. */
+  /** Set by EngineHost; when present, each attempt is recorded in task_executions (FR-14). */
+  store?: InstanceStore;
+  /** Overridden by the failure ladder. Default: one attempt, validate, throw on failure. */
   runTask?: RunTaskFn;
 }
 
@@ -38,8 +41,13 @@ export function resolveInputs(
 }
 
 export function makeSingleAttemptRunTask(deps: DispatchDeps): RunTaskFn {
+  // Per-node attempt counter so ladder retries get real attempt numbers.
+  const attempts = new Map<string, number>();
   return async (nodeId, contract, environment) => {
+    const attempt = (attempts.get(nodeId) ?? 0) + 1;
+    attempts.set(nodeId, attempt);
     const inputs = resolveInputs(contract, environment);
+    const recId = deps.store?.startTaskExecution(deps.instanceId, nodeId, contract.kind, attempt, inputs);
     const controller = new AbortController();
     const timeoutMs = contract.timeoutSeconds * 1000;
     const timer = setTimeout(
@@ -56,14 +64,26 @@ export function makeSingleAttemptRunTask(deps: DispatchDeps): RunTaskFn {
           instanceId: deps.instanceId,
           nodeId,
           workspace: deps.workspace,
-          attempt: 1,
+          attempt,
           signal: controller.signal,
           dataDir: deps.dataDir,
         }),
         timedOut,
       ]);
       validateOutput(contract.outputSchema, result.output);
+      if (recId !== undefined) {
+        deps.store!.finishTaskExecution(recId, {
+          status: 'completed',
+          output: result.output,
+          tokenUsage: result.tokenUsage,
+          costUsd: result.costUsd,
+          transcriptPath: result.transcriptPath,
+        });
+      }
       return result.output;
+    } catch (err) {
+      if (recId !== undefined) deps.store!.finishTaskExecution(recId, { status: 'failed', error: String(err) });
+      throw err;
     } finally {
       clearTimeout(timer);
     }

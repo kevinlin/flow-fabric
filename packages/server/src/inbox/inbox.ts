@@ -13,7 +13,8 @@ export class Inbox {
   /** Wire as EngineHostOptions.onUserTaskWait. Idempotent across resumes. */
   handleWait(info: UserTaskWaitInfo): void {
     if (this.store.findPendingUserTask(info.instanceId, info.nodeId)) return;
-    this.store.createUserTask(info.instanceId, info.nodeId, JSON.stringify(info.formSchema));
+    const taskExecutionId = this.store.startTaskExecution(info.instanceId, info.nodeId, 'user', 1, {});
+    this.store.createUserTask(info.instanceId, info.nodeId, JSON.stringify(info.formSchema), taskExecutionId);
     void this.notifier.notify(
       'Flow Fabric: task waiting',
       `${info.instanceId}: ${info.nodeId} needs your input`,
@@ -30,5 +31,8 @@ export class Inbox {
     validateOutput(JSON.parse(task.formSchema), vars); // FR-13: validate before resuming
     this.host.signal(task.instanceId, task.nodeId, vars);
     this.store.submitUserTask(taskId, vars);
+    if (task.taskExecutionId !== null) {
+      this.store.finishTaskExecution(task.taskExecutionId, { status: 'completed', output: vars });
+    }
   }
 }

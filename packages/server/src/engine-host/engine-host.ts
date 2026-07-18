@@ -172,6 +172,7 @@ export class EngineHost {
       dataDir: this.opts.dataDir ?? os.tmpdir(),
       profile,
       runners,
+      store: this.store,
     };
     // The failure ladder replaces the single-attempt seam for every instance
     // (dry-run stub path included), so incidents work in dry runs too.
