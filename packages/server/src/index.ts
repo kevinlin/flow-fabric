@@ -21,6 +21,8 @@ export type { ProcessProfile } from './profile/read.js';
 export { DefinitionStore } from './definitions/store.js';
 export type { DefinitionRow, DefinitionVersionRow } from './definitions/store.js';
 export { lint } from './linter/lint.js';
+export { applyPatchOps, PatchOpError } from './patch-ops/apply.js';
+export type { PatchOp, PatchDiff, PatchResult } from './patch-ops/apply.js';
 export type { RunContext, RunResult, TaskRunner } from './runners/types.js';
 export { StubRunner, deriveFromSchema } from './runners/stub.js';
 export { CodeRunner } from './runners/code.js';
