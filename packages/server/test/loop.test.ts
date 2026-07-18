@@ -35,7 +35,7 @@ describe('timer loop across restart', () => {
     const store2 = new InstanceStore(dbPath);
     stores.push(store2);
     const host2 = new EngineHost(store2);
-    const resumed = host2.resumeAll();
+    const resumed = await host2.resumeAll();
     await Promise.all(resumed.map((r) => r.completion));
 
     expect(store2.getInstance('l1')?.status).toBe('completed');

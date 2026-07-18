@@ -48,7 +48,7 @@ describe('durable resume', () => {
     stores.push(store2);
     const host2 = new EngineHost(store2);
     const resumeStart = Date.now();
-    const resumed = host2.resumeAll();
+    const resumed = await host2.resumeAll();
     expect(resumed.map((r) => r.id)).toEqual(['r1']);
     await resumed[0].completion;
 
@@ -80,7 +80,7 @@ describe('durable resume', () => {
 
     const host = new EngineHost(store);
     const resumeStart = Date.now();
-    const resumed = host.resumeAll();
+    const resumed = await host.resumeAll();
     expect(resumed.map((r) => r.id)).toEqual(['k1']);
     await resumed[0].completion;
 

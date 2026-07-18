@@ -8,6 +8,9 @@ export interface InstanceRow {
   source: string;
   status: InstanceStatus;
   engineState: string | null;
+  workspace: string;
+  dryRun: boolean;
+  stubOverrides: string | null;
 }
 
 export interface EventRow {
@@ -16,6 +19,15 @@ export interface EventRow {
   elementId: string | null;
   detail: string | null;
   ts: number;
+}
+
+const INSTANCE_COLUMNS = `id, name, source, status, engine_state AS engineState,
+  workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides`;
+
+type RawInstanceRow = Omit<InstanceRow, 'dryRun'> & { dryRun: number };
+
+function coerceInstance(row: RawInstanceRow): InstanceRow {
+  return { ...row, dryRun: !!row.dryRun };
 }
 
 export class InstanceStore {
@@ -31,6 +43,9 @@ export class InstanceStore {
         source TEXT NOT NULL,
         status TEXT NOT NULL,
         engine_state TEXT,
+        workspace_path TEXT NOT NULL DEFAULT '',
+        dry_run INTEGER NOT NULL DEFAULT 0,
+        stub_overrides TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       );
@@ -45,14 +60,33 @@ export class InstanceStore {
     `);
   }
 
-  createInstance(id: string, name: string, source: string): void {
+  createInstance(
+    id: string,
+    name: string,
+    source: string,
+    opts: {
+      workspace?: string;
+      dryRun?: boolean;
+      stubOverrides?: Record<string, Record<string, unknown>>;
+    } = {},
+  ): void {
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO instances (id, name, source, status, engine_state, created_at, updated_at)
-         VALUES (?, ?, ?, 'running', NULL, ?, ?)`,
+        `INSERT INTO instances
+           (id, name, source, status, engine_state, workspace_path, dry_run, stub_overrides, created_at, updated_at)
+         VALUES (?, ?, ?, 'running', NULL, ?, ?, ?, ?, ?)`,
       )
-      .run(id, name, source, now, now);
+      .run(
+        id,
+        name,
+        source,
+        opts.workspace ?? '',
+        opts.dryRun ? 1 : 0,
+        opts.stubOverrides ? JSON.stringify(opts.stubOverrides) : null,
+        now,
+        now,
+      );
   }
 
   saveEngineState(id: string, stateJson: string): void {
@@ -75,18 +109,19 @@ export class InstanceStore {
 
   getInstance(id: string): InstanceRow | undefined {
     const row = this.db
-      .prepare(`SELECT id, name, source, status, engine_state AS engineState FROM instances WHERE id = ?`)
-      .get(id) as InstanceRow | undefined;
-    return row;
+      .prepare(`SELECT ${INSTANCE_COLUMNS} FROM instances WHERE id = ?`)
+      .get(id) as RawInstanceRow | undefined;
+    return row ? coerceInstance(row) : undefined;
   }
 
   listNonTerminal(): InstanceRow[] {
-    return this.db
-      .prepare(
-        `SELECT id, name, source, status, engine_state AS engineState
-         FROM instances WHERE status IN ('running', 'stopped')`,
-      )
-      .all() as InstanceRow[];
+    return (
+      this.db
+        .prepare(
+          `SELECT ${INSTANCE_COLUMNS} FROM instances WHERE status IN ('running', 'stopped')`,
+        )
+        .all() as RawInstanceRow[]
+    ).map(coerceInstance);
   }
 
   listEvents(instanceId: string): EventRow[] {
