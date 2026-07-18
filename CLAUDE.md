@@ -52,7 +52,7 @@ Durability is the core bet (FR-9). The mechanism:
 - On every activity transition (`activity.start` / `activity.end` / `activity.wait` / `activity.timer`), `EngineHost` appends an event and re-serializes `engine.getState()` into `instances.engine_state`.
 - On boot, `resumeAll()` loads non-terminal instances, rebuilds each engine with `new Engine().recover(state)`, and resumes. In-flight timers fire at their **originally scheduled** time, not reset — this is what makes 24/7 operation and multi-day timer loops safe.
 
-## bpmn-engine gotchas (from the M1 spike — see [findings_m1-spike.md](docs/specs/findings_m1-spike.md))
+## bpmn-engine gotchas (from the M1 spike — see [plan_m1-engine-spike.md § Spike Findings](docs/specs/plan_m1-engine-spike.md#spike-findings))
 
 These are load-bearing and easy to get wrong:
 
@@ -86,7 +86,6 @@ Read the spec before extending anything — most of the system is designed but u
 - [docs/product/prd_flow-fabric.md](docs/product/prd_flow-fabric.md) — PRD: problem, goals (G1–G3), requirements (FR-1..25), v1 scope
 - [docs/specs/design_flow-fabric.md](docs/specs/design_flow-fabric.md) — approved design: modules, profile, data model, execution semantics, failure ladder
 - [docs/specs/impl_flow-fabric.md](docs/specs/impl_flow-fabric.md) — five milestones (M1–M5), each with a verification gate
-- [docs/specs/plan_m1-engine-spike.md](docs/specs/plan_m1-engine-spike.md) — M1 task-by-task plan (done)
-- [docs/specs/findings_m1-spike.md](docs/specs/findings_m1-spike.md) — spike findings + GO verdict
+- [docs/specs/plan_m1-engine-spike.md](docs/specs/plan_m1-engine-spike.md) — M1 plan (done, compacted) + spike findings + GO verdict
 
 `Input/` and `Output/` are git-ignored. The two real BPMN files (`Input/bpmn/rfp-daily-routine.bpmn`, the flagship Signavio export, and `interview-process.bpmn`, the intake generality case) live locally but aren't tracked.
