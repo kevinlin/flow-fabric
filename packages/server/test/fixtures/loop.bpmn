@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="loopDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="loopProcess" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="work" />
+    <scriptTask id="work" scriptFormat="javascript">
+      <script><![CDATA[
+        this.environment.variables.count = (this.environment.variables.count || 0) + 1;
+        next();
+      ]]></script>
+    </scriptTask>
+    <sequenceFlow id="f2" sourceRef="work" targetRef="gw" />
+    <exclusiveGateway id="gw" default="toEnd" />
+    <sequenceFlow id="loop" sourceRef="gw" targetRef="wait">
+      <conditionExpression xsi:type="tFormalExpression" language="javascript"><![CDATA[
+        next(null, this.environment.variables.count < 3);
+      ]]></conditionExpression>
+    </sequenceFlow>
+    <intermediateCatchEvent id="wait">
+      <timerEventDefinition>
+        <timeDuration xsi:type="tFormalExpression">PT2S</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="back" sourceRef="wait" targetRef="work" />
+    <sequenceFlow id="toEnd" sourceRef="gw" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>
