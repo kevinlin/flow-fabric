@@ -13,7 +13,8 @@
     "better-sqlite3": "^12",
     "bpmn-engine": "^25",
     "bpmn-moddle": "^10",
-    "fastify": "^5.10.0"
+    "fastify": "^5.10.0",
+    "zod": "^4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6",

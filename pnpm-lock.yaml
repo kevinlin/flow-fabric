@@ -31,6 +31,9 @@ importers:
       fastify:
         specifier: ^5.10.0
         version: 5.10.0
+      zod:
+        specifier: ^4
+        version: 4.4.3
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6
