@@ -1,0 +1,29 @@
+# Project data
+Input/
+Output/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local store
+*.db
+*.sqlite3
+
+# Env
+.env
+
+# macOS
+.DS_Store
+
+# Worktrees
+.worktrees/
