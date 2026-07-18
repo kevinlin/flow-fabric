@@ -147,6 +147,10 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
     return reply; // keep the connection open
   });
 
+  app.get('/api/metrics/definitions/:id', async (req) =>
+    store.metricsForDefinition((req.params as { id: string }).id),
+  );
+
   if (definitions) {
     app.post('/api/definitions', async (req, reply) => {
       const { name, xml } = req.body as { name: string; xml: string };

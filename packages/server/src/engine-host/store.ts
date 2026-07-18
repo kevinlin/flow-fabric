@@ -407,7 +407,76 @@ export class InstanceStore {
       .run(resolution, Date.now(), id);
   }
 
+  metricsForDefinition(definitionId: string): DefinitionMetrics {
+    const byStatus = this.db
+      .prepare(`SELECT status, COUNT(*) AS n FROM instances WHERE definition_id = ? GROUP BY status`)
+      .all(definitionId) as Array<{ status: InstanceStatus; n: number }>;
+    const count = (s: InstanceStatus) => byStatus.find((r) => r.status === s)?.n ?? 0;
+    const completed = count('completed');
+    const terminated = count('terminated');
+    const aborted = count('aborted');
+    const error = count('error');
+    const total = byStatus.reduce((sum, r) => sum + r.n, 0);
+    const finished = completed + terminated + aborted + error;
+
+    const durationsMs = (
+      this.db
+        .prepare(
+          `SELECT updated_at - created_at AS d FROM instances
+           WHERE definition_id = ? AND status IN ('completed', 'terminated') ORDER BY created_at`,
+        )
+        .all(definitionId) as Array<{ d: number }>
+    ).map((r) => r.d);
+
+    const costPerRun = this.db
+      .prepare(
+        `SELECT i.id AS instanceId, COALESCE(SUM(te.cost_usd), 0) AS costUsd
+         FROM instances i LEFT JOIN task_executions te ON te.instance_id = i.id
+         WHERE i.definition_id = ? GROUP BY i.id ORDER BY i.created_at`,
+      )
+      .all(definitionId) as Array<{ instanceId: string; costUsd: number }>;
+
+    const costPerTask = this.db
+      .prepare(
+        `SELECT te.node_id AS nodeId, COUNT(*) AS runs,
+                COALESCE(SUM(te.cost_usd), 0) AS totalCostUsd,
+                AVG(te.ended_at - te.started_at) AS avgDurationMs
+         FROM task_executions te JOIN instances i ON i.id = te.instance_id
+         WHERE i.definition_id = ? AND te.status = 'completed'
+         GROUP BY te.node_id ORDER BY te.node_id`,
+      )
+      .all(definitionId) as DefinitionMetrics['costPerTask'];
+
+    const inc = this.db
+      .prepare(
+        `SELECT COUNT(*) AS total, COALESCE(SUM(inc.status = 'open'), 0) AS open
+         FROM incidents inc JOIN instances i ON i.id = inc.instance_id
+         WHERE i.definition_id = ?`,
+      )
+      .get(definitionId) as { total: number; open: number };
+
+    return {
+      runs: { total, completed, terminated, aborted, error, active: total - finished },
+      successRate: finished === 0 ? null : (completed + terminated) / finished,
+      durationsMs,
+      costPerRun,
+      costPerTask,
+      incidents: inc,
+    };
+  }
+
   close(): void {
     this.db.close();
   }
+}
+
+export interface DefinitionMetrics {
+  runs: { total: number; completed: number; terminated: number; aborted: number; error: number; active: number };
+  /** (completed+terminated) / all finished runs; null when nothing finished yet. */
+  successRate: number | null;
+  /** Wall-clock duration of each successfully finished run (completed/terminated). */
+  durationsMs: number[];
+  costPerRun: Array<{ instanceId: string; costUsd: number }>;
+  costPerTask: Array<{ nodeId: string; runs: number; totalCostUsd: number; avgDurationMs: number | null }>;
+  incidents: { total: number; open: number };
 }
