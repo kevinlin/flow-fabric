@@ -1,5 +1,7 @@
 export { InstanceStore } from './engine-host/store.js';
-export type { InstanceRow, EventRow, InstanceStatus, UserTaskRow } from './engine-host/store.js';
+export type { InstanceRow, EventRow, InstanceStatus, UserTaskRow, IncidentRow } from './engine-host/store.js';
+export { makeLadderRunTask } from './engine-host/failure.js';
+export type { LadderDeps, Hold } from './engine-host/failure.js';
 export { EngineHost } from './engine-host/engine-host.js';
 export type { UserTaskWaitInfo } from './engine-host/engine-host.js';
 export { Inbox } from './inbox/inbox.js';

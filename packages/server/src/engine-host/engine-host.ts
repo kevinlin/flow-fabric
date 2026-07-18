@@ -6,6 +6,9 @@ import type { InstanceRow, InstanceStore } from './store.js';
 import { readProfile, type ProcessProfile } from '../profile/read.js';
 import { StubRunner } from '../runners/stub.js';
 import { createDispatch, type RunnerSet } from './dispatch.js';
+import { makeLadderRunTask, type Hold } from './failure.js';
+import type { Notifier } from '../notify/notifier.js';
+import { validateOutput } from '../runners/validate.js';
 
 const SNAPSHOT_EVENTS = ['activity.start', 'activity.wait', 'activity.timer', 'activity.end'];
 
@@ -23,6 +26,7 @@ export interface EngineHostOptions {
   runners?: RunnerSet;
   dataDir?: string;
   onUserTaskWait?: (info: UserTaskWaitInfo) => void;
+  notifier?: Notifier;
 }
 
 interface RunningEntry {
@@ -44,6 +48,8 @@ function missingRunners(): RunnerSet {
 export class EngineHost {
   private running = new Map<string, RunningEntry>();
   private profiles = new Map<string, ProcessProfile>();
+  private holds = new Map<string, Hold>();
+  private aborting = new Set<string>();
 
   constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {}
 
@@ -98,6 +104,53 @@ export class EngineHost {
     entry.execution.signal({ id: nodeId });
   }
 
+  /** Stop the engine and mark the instance aborted. */
+  async abort(instanceId: string): Promise<void> {
+    const entry = this.running.get(instanceId);
+    this.aborting.add(instanceId);
+    this.store.appendEvent(instanceId, 'instance.aborted');
+    if (entry) await entry.engine.stop();
+    this.store.setStatus(instanceId, 'aborted');
+  }
+
+  /** Resolve an open incident: retry | skip | abort (design §6.3). */
+  async resolveIncident(
+    incidentId: number,
+    action: 'retry' | 'skip' | 'abort',
+    output?: Record<string, unknown>,
+  ): Promise<void> {
+    const incident = this.store.getIncident(incidentId);
+    if (!incident || incident.status !== 'open') throw new Error(`no open incident ${incidentId}`);
+    const key = `${incident.instanceId}:${incident.nodeId}`;
+    const hold = this.holds.get(key);
+    if (!hold) throw new Error(`incident ${incidentId} has no held task in this host`);
+
+    if (action === 'abort') {
+      this.store.resolveIncident(incidentId, 'abort');
+      this.holds.delete(key);
+      await this.abort(incident.instanceId);
+      return;
+    }
+    if (action === 'skip') {
+      validateOutput(hold.contract.outputSchema, output ?? {}); // throws → incident stays open
+      this.store.resolveIncident(incidentId, 'skip');
+      this.store.setStatus(incident.instanceId, 'running');
+      Object.assign(hold.environment.variables, output);
+      hold.release(output ?? {});
+      return;
+    }
+    // retry: one fresh attempt; failure keeps the incident open and held.
+    try {
+      const result = await hold.attempt();
+      this.store.resolveIncident(incidentId, 'retry');
+      this.store.setStatus(incident.instanceId, 'running');
+      hold.release(result);
+    } catch (err) {
+      this.store.appendEvent(incident.instanceId, 'task.attempt-failed', incident.nodeId, String(err));
+      throw err;
+    }
+  }
+
   private runningProcess(execution: any): { environment: { variables: Record<string, unknown> } } {
     for (const def of execution.definitions ?? []) {
       const procs = def.getRunningProcesses?.() ?? [];
@@ -113,13 +166,22 @@ export class EngineHost {
     const runners: RunnerSet = row.dryRun
       ? { agent: new StubRunner(overrides), code: new StubRunner(overrides) }
       : this.opts.runners ?? missingRunners();
-    const { extensions, scripts } = createDispatch({
+    const dispatchDeps = {
       instanceId: row.id,
       workspace: row.workspace,
       dataDir: this.opts.dataDir ?? os.tmpdir(),
       profile,
       runners,
+    };
+    // The failure ladder replaces the single-attempt seam for every instance
+    // (dry-run stub path included), so incidents work in dry runs too.
+    const runTask = makeLadderRunTask({
+      ...dispatchDeps,
+      store: this.store,
+      notifier: this.opts.notifier,
+      holds: this.holds,
     });
+    const { extensions, scripts } = createDispatch({ ...dispatchDeps, runTask });
     return { extensions, scripts, moddleOptions: { flowfabric: flowfabricModdle } };
   }
 
@@ -169,7 +231,15 @@ export class EngineHost {
       await queue;
       const state = await engine.getState();
       this.store.saveEngineState(id, JSON.stringify(state));
-      this.store.setStatus(id, result === 'end' ? 'completed' : 'stopped');
+      if (result === 'end') {
+        this.store.setStatus(id, 'completed');
+      } else if (this.aborting.has(id)) {
+        this.store.setStatus(id, 'aborted');
+        this.aborting.delete(id);
+      } else if (this.store.getInstance(id)?.status === 'running') {
+        // A held incident keeps its 'incident' status across a stop.
+        this.store.setStatus(id, 'stopped');
+      }
       this.store.appendEvent(id, `engine.${result}`);
     } catch (err) {
       await queue;

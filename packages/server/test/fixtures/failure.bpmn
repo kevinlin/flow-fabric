@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowfabric="http://flowfabric.dev/schema/1.0"
+             id="failureDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="failureProcess" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="flaky" />
+    <scriptTask id="flaky" name="Flaky step">
+      <extensionElements>
+        <flowfabric:codeTask command="unused" retries="1" timeoutSeconds="30">
+          <flowfabric:outputSchema>{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"}},"additionalProperties":false}</flowfabric:outputSchema>
+        </flowfabric:codeTask>
+      </extensionElements>
+    </scriptTask>
+    <!--BOUNDARY-->
+    <sequenceFlow id="f2" sourceRef="flaky" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>

@@ -1,6 +1,12 @@
 import Database from 'better-sqlite3';
 
-export type InstanceStatus = 'running' | 'completed' | 'stopped' | 'error';
+export type InstanceStatus =
+  | 'running'
+  | 'completed'
+  | 'stopped'
+  | 'error'
+  | 'incident'
+  | 'aborted';
 
 export interface InstanceRow {
   id: string;
@@ -30,11 +36,23 @@ export interface UserTaskRow {
   submittedVars: string | null;
 }
 
+export interface IncidentRow {
+  id: number;
+  instanceId: string;
+  nodeId: string;
+  reason: string;
+  status: 'open' | 'resolved';
+  resolution: string | null;
+}
+
 const INSTANCE_COLUMNS = `id, name, source, status, engine_state AS engineState,
   workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides`;
 
 const USER_TASK_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
   form_schema AS formSchema, status, submitted_vars AS submittedVars`;
+
+const INCIDENT_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
+  reason, status, resolution`;
 
 type RawInstanceRow = Omit<InstanceRow, 'dryRun'> & { dryRun: number };
 
@@ -78,6 +96,16 @@ export class InstanceStore {
         submitted_vars TEXT,
         created_at INTEGER NOT NULL,
         submitted_at INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS incidents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        instance_id TEXT NOT NULL REFERENCES instances(id),
+        node_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        status TEXT NOT NULL,
+        resolution TEXT,
+        created_at INTEGER NOT NULL,
+        resolved_at INTEGER
       );
     `);
   }
@@ -140,7 +168,7 @@ export class InstanceStore {
     return (
       this.db
         .prepare(
-          `SELECT ${INSTANCE_COLUMNS} FROM instances WHERE status IN ('running', 'stopped')`,
+          `SELECT ${INSTANCE_COLUMNS} FROM instances WHERE status IN ('running', 'stopped', 'incident')`,
         )
         .all() as RawInstanceRow[]
     ).map(coerceInstance);
@@ -192,6 +220,45 @@ export class InstanceStore {
         `UPDATE user_tasks SET status = 'submitted', submitted_vars = ?, submitted_at = ? WHERE id = ?`,
       )
       .run(JSON.stringify(vars), Date.now(), id);
+  }
+
+  createIncident(instanceId: string, nodeId: string, reason: string): number {
+    const result = this.db
+      .prepare(
+        `INSERT INTO incidents (instance_id, node_id, reason, status, created_at)
+         VALUES (?, ?, ?, 'open', ?)`,
+      )
+      .run(instanceId, nodeId, reason, Date.now());
+    return Number(result.lastInsertRowid);
+  }
+
+  findOpenIncident(instanceId: string, nodeId: string): IncidentRow | undefined {
+    return this.db
+      .prepare(
+        `SELECT ${INCIDENT_COLUMNS} FROM incidents
+         WHERE instance_id = ? AND node_id = ? AND status = 'open'`,
+      )
+      .get(instanceId, nodeId) as IncidentRow | undefined;
+  }
+
+  listOpenIncidents(): IncidentRow[] {
+    return this.db
+      .prepare(`SELECT ${INCIDENT_COLUMNS} FROM incidents WHERE status = 'open' ORDER BY id`)
+      .all() as IncidentRow[];
+  }
+
+  getIncident(id: number): IncidentRow | undefined {
+    return this.db
+      .prepare(`SELECT ${INCIDENT_COLUMNS} FROM incidents WHERE id = ?`)
+      .get(id) as IncidentRow | undefined;
+  }
+
+  resolveIncident(id: number, resolution: string): void {
+    this.db
+      .prepare(
+        `UPDATE incidents SET status = 'resolved', resolution = ?, resolved_at = ? WHERE id = ?`,
+      )
+      .run(resolution, Date.now(), id);
   }
 
   close(): void {
