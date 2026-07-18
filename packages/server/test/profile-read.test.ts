@@ -38,4 +38,26 @@ describe('readProfile', () => {
     expect(errorBoundaryHosts.has('codeTask')).toBe(true);
     expect(errorBoundaryHosts.has('agentTask')).toBe(false);
   });
+
+  it('reads instanceInputs and terminateEnds', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowfabric="http://flowfabric.dev/schema/1.0"
+             id="tDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="p" isExecutable="true">
+    <extensionElements>
+      <flowfabric:instanceInputs>
+        <flowfabric:input name="deadline" type="string" />
+      </flowfabric:instanceInputs>
+    </extensionElements>
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="stop" />
+    <endEvent id="stop"><terminateEventDefinition /></endEvent>
+    <endEvent id="plainEnd" />
+  </process>
+</definitions>`;
+    const profile = await readProfile(xml);
+    expect(profile.instanceInputs).toEqual([{ name: 'deadline', type: 'string' }]);
+    expect(profile.terminateEnds).toEqual(new Set(['stop']));
+  });
 });

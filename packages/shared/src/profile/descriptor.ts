@@ -49,6 +49,11 @@ export const flowfabricModdle = {
         { name: 'type', isAttr: true, type: 'String' },
       ],
     },
+    {
+      name: 'InstanceInputs',
+      superClass: ['Element'],
+      properties: [{ name: 'inputs', isMany: true, type: 'Input' }],
+    },
     body('Prompt'),
     body('Tools'),
     body('Boundaries'),

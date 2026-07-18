@@ -8,6 +8,8 @@ import {
 export interface ProcessProfile {
   contracts: Map<string, TaskContract>;
   errorBoundaryHosts: Set<string>;
+  instanceInputs: InputDecl[];
+  terminateEnds: Set<string>;
 }
 
 const DEFAULT_RETRIES = 0;
@@ -26,9 +28,13 @@ export async function readProfile(xml: string): Promise<ProcessProfile> {
   const { rootElement } = await moddle.fromXML(xml);
   const contracts = new Map<string, TaskContract>();
   const errorBoundaryHosts = new Set<string>();
+  const instanceInputs: InputDecl[] = [];
+  const terminateEnds = new Set<string>();
 
   for (const root of (rootElement as any).rootElements ?? []) {
     if (root.$type !== 'bpmn:Process') continue;
+    const ii = ext(root, 'flowfabric:InstanceInputs');
+    if (ii) instanceInputs.push(...inputs(ii.inputs));
     for (const el of root.flowElements ?? []) {
       if (el.$type === 'bpmn:ServiceTask') {
         const a = ext(el, 'flowfabric:AgentTask');
@@ -66,8 +72,13 @@ export async function readProfile(xml: string): Promise<ProcessProfile> {
           (d: any) => d.$type === 'bpmn:ErrorEventDefinition',
         );
         if (isError && el.attachedToRef?.id) errorBoundaryHosts.add(el.attachedToRef.id);
+      } else if (el.$type === 'bpmn:EndEvent') {
+        const isTerminate = (el.eventDefinitions ?? []).some(
+          (d: any) => d.$type === 'bpmn:TerminateEventDefinition',
+        );
+        if (isTerminate) terminateEnds.add(el.id);
       }
     }
   }
-  return { contracts, errorBoundaryHosts };
+  return { contracts, errorBoundaryHosts, instanceInputs, terminateEnds };
 }

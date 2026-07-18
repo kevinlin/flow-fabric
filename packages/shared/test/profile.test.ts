@@ -48,3 +48,29 @@ describe('flowfabric moddle descriptor', () => {
     expect(reXml).toContain('http://flowfabric.dev/schema/1.0');
   });
 });
+
+describe('instanceInputs process extension', () => {
+  const procXml = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowfabric="http://flowfabric.dev/schema/1.0"
+             id="iiDef" targetNamespace="http://flowfabric.dev/spike">
+  <process id="p" isExecutable="true">
+    <extensionElements>
+      <flowfabric:instanceInputs>
+        <flowfabric:input name="submissionDeadline" type="string" />
+      </flowfabric:instanceInputs>
+    </extensionElements>
+    <startEvent id="start" />
+  </process>
+</definitions>`;
+
+  it('parses and round-trips instanceInputs', async () => {
+    const m = moddle();
+    const parsed = await m.fromXML(procXml);
+    const proc = parsed.rootElement.rootElements.find((e: any) => e.$type === 'bpmn:Process');
+    const ii = extensionOf(proc, 'flowfabric:InstanceInputs');
+    expect(ii.inputs.map((i: any) => i.name)).toEqual(['submissionDeadline']);
+    const { xml: reXml } = await m.toXML(parsed.rootElement, { format: true });
+    expect(reXml).toContain('flowfabric:instanceInputs');
+  });
+});
