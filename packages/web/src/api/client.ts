@@ -17,8 +17,10 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 function post<T>(url: string, body?: unknown): Promise<T> {
   return req<T>(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    ...(body !== undefined && {
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
   });
 }
 

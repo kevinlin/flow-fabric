@@ -75,6 +75,9 @@ export class AgentRunner implements TaskRunner {
       maxTurns: 50,
       abortController,
     };
+    if (process.env.CLAUDE_CODE_PATH) {
+      baseOptions.pathToClaudeCodeExecutable = process.env.CLAUDE_CODE_PATH;
+    }
 
     try {
       const first = await this.runSession(buildPrompt(contract, inputs), baseOptions, transcript);
