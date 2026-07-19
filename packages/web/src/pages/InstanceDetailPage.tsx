@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { InstanceDetailDto, TimelineEntryDto } from '@flowfabric/shared';
 import { api } from '../api/client';
 import { useEventStream } from '../api/sse';
 import { BpmnCanvas } from '../components/BpmnCanvas';
 import { nodeMarkers } from '../lib/node-status';
-import { deriveDisplayStatus, fmtCost, fmtDuration } from '../lib/instance-view';
+import { deriveStatusView, fmtCost, fmtDuration } from '../lib/instance-view';
 
 export function InstanceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +14,7 @@ export function InstanceDetailPage() {
   const [tab, setTab] = useState<'diagram' | 'timeline'>('diagram');
   const [pending, setPending] = useState(0);
   const [timers, setTimers] = useState(0);
+  const [transcriptId, setTranscriptId] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -34,54 +35,88 @@ export function InstanceDetailPage() {
   if (!detail) return <p className="muted">Loading…</p>;
   const { instance, timeline, events } = detail;
   const markers = nodeMarkers(events);
+  const status = deriveStatusView(instance, pending, timers);
+  const abortable = ['running', 'incident'].includes(instance.status);
 
   return (
     <section>
       <h1>{instance.name}</h1>
-      <p>Status: <b>{deriveDisplayStatus(instance, pending, timers)}</b>{' '}
-        <span className="muted">· {instance.workspace}</span>{' '}
-        {['running', 'incident'].includes(instance.status) && (
-          <button onClick={() => api.abortInstance(instance.id).then(refresh)}>Abort</button>
+      <div className="instance-meta">
+        <span className={`status-${status.badgeClass}`}>{status.label}</span>
+        <span className="workspace" title={instance.workspace}>{instance.workspace}</span>
+        {abortable && (
+          <button className="btn-danger" onClick={() => api.abortInstance(instance.id).then(refresh)}>Abort</button>
         )}
-      </p>
+      </div>
       <div className="tabs">
         <button className={tab === 'diagram' ? 'active' : ''} onClick={() => setTab('diagram')}>Diagram</button>
         <button className={tab === 'timeline' ? 'active' : ''} onClick={() => setTab('timeline')}>Timeline</button>
       </div>
       {tab === 'diagram'
-        ? (xml ? <BpmnCanvas xml={xml} markers={markers} /> : <p className="muted">No diagram (started from raw source).</p>)
-        : <Timeline rows={timeline} />}
+        ? (xml ? <BpmnCanvas xml={xml} markers={markers} /> : <p className="muted">No diagram — this instance was started from raw source.</p>)
+        : <Timeline rows={timeline} onViewTranscript={setTranscriptId} />}
+      {transcriptId !== null && (
+        <TranscriptDialog execId={transcriptId} onClose={() => setTranscriptId(null)} />
+      )}
     </section>
   );
 }
 
-function Timeline({ rows }: { rows: TimelineEntryDto[] }) {
+interface TimelineProps {
+  rows: TimelineEntryDto[];
+  onViewTranscript: (execId: number) => void;
+}
+
+function Timeline({ rows, onViewTranscript }: TimelineProps) {
   if (rows.length === 0) return <p className="muted">No steps recorded yet.</p>;
   return (
-    <table>
-      <thead><tr><th>Node</th><th>Actor</th><th>Attempt</th><th>Status</th><th>Duration</th><th>Cost</th><th>Inputs</th><th>Output</th><th>Transcript</th></tr></thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.id}>
-            <td>{r.nodeId}</td>
-            <td>{r.actor}</td>
-            <td>{r.attempt}</td>
-            <td className={`status-${r.status}`}>{r.status}</td>
-            <td>{fmtDuration(r.endedAt ? r.endedAt - r.startedAt : null)}</td>
-            <td>{fmtCost(r.costUsd)}</td>
-            <td><OutputCell json={r.resolvedInputs} /></td>
-            <td><OutputCell json={r.output ?? r.error} /></td>
-            <td>{r.transcriptPath
-              ? <button onClick={() => api.transcript(r.id).then((t) => window.alert(t.slice(0, 4000)))}>view</button>
-              : <span className="muted">—</span>}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="table-scroll">
+      <table>
+        <thead><tr><th>Node</th><th>Actor</th><th>Attempt</th><th>Status</th><th>Duration</th><th>Cost</th><th>Inputs</th><th>Output</th><th>Transcript</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <td>{r.nodeId}</td>
+              <td>{r.actor}</td>
+              <td>{r.attempt}</td>
+              <td className={`status-${r.status}`}>{r.status}</td>
+              <td>{fmtDuration(r.endedAt ? r.endedAt - r.startedAt : null)}</td>
+              <td>{fmtCost(r.costUsd)}</td>
+              <td><OutputCell json={r.resolvedInputs} /></td>
+              <td><OutputCell json={r.output ?? r.error} /></td>
+              <td>{r.transcriptPath
+                ? <button onClick={() => onViewTranscript(r.id)}>View</button>
+                : <span className="muted">—</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 function OutputCell({ json }: { json: string | null }) {
   if (!json) return <span className="muted">—</span>;
   return <code className="cell-json" title={json}>{json.length > 60 ? `${json.slice(0, 60)}…` : json}</code>;
+}
+
+function TranscriptDialog({ execId, onClose }: { execId: number; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [text, setText] = useState<string | null>(null);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    ref.current?.showModal();
+    api.transcript(execId).then(setText).catch((e) => setError(String(e)));
+  }, [execId]);
+
+  return (
+    <dialog className="transcript" ref={ref} onClose={onClose}>
+      <div className="dlg-head">
+        <span className="dlg-title">Transcript · execution #{execId}</span>
+        <button onClick={() => ref.current?.close()}>Close</button>
+      </div>
+      <pre>{error ? error : text === null ? 'Loading transcript…' : text || '(empty transcript)'}</pre>
+    </dialog>
+  );
 }

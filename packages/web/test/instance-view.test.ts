@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveDisplayStatus, fmtDuration, fmtCost } from '../src/lib/instance-view';
+import { deriveDisplayStatus, deriveStatusView, fmtDuration, fmtCost } from '../src/lib/instance-view';
 import type { InstanceDto } from '@flowfabric/shared';
 
 const inst = (status: InstanceDto['status']): InstanceDto => ({
@@ -17,6 +17,17 @@ describe('deriveDisplayStatus', () => {
   it('passes real statuses through', () => {
     expect(deriveDisplayStatus(inst('incident'), 0, 0)).toBe('incident');
     expect(deriveDisplayStatus(inst('running'), 0, 0)).toBe('running');
+  });
+});
+
+describe('deriveStatusView', () => {
+  it('maps waiting states to the "waiting" badge class with a readable label', () => {
+    expect(deriveStatusView(inst('running'), 1, 0)).toEqual({ badgeClass: 'waiting', label: 'waiting · user task' });
+    expect(deriveStatusView(inst('running'), 0, 1)).toEqual({ badgeClass: 'waiting', label: 'waiting · timer' });
+  });
+  it('uses the raw status as both class and label otherwise', () => {
+    expect(deriveStatusView(inst('incident'), 0, 0)).toEqual({ badgeClass: 'incident', label: 'incident' });
+    expect(deriveStatusView(inst('terminated'), 0, 0)).toEqual({ badgeClass: 'terminated', label: 'terminated' });
   });
 });
 

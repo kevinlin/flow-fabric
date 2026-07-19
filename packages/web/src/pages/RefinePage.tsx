@@ -17,15 +17,17 @@ export function RefinePage() {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<string>();
+  const [error, setError] = useState<string>();
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
+    setError(undefined);
     api.startGrill(id).then(async ({ sessionId, lint }) => {
       setSessionId(sessionId);
       setLint(lint);
       setXml((await api.getGrill(sessionId)).xml);
-    });
+    }).catch((e) => setError(`Could not start a refine session: ${e}`));
   }, [id]);
 
   useEventStream(sessionId ? `/api/grill/sessions/${sessionId}/events` : '/api/events', (ev: any) => {
@@ -41,20 +43,32 @@ export function RefinePage() {
     }
   });
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), [chat]);
+  // Keep the latest message in view. A concise-arrow effect would *return*
+  // scrollIntoView's value (a Promise in some browsers), which React treats as
+  // a cleanup fn and later tries to call — crashing the tree. Block body = no return.
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
 
   async function send(text: string = draft) {
     if (!sessionId || !text.trim()) return;
     setChat((c) => [...c, { who: 'you', text }]);
     setBusy(true);
     setDraft('');
-    await api.sendGrill(sessionId, text);
+    try {
+      await api.sendGrill(sessionId, text);
+    } catch (e) {
+      setBusy(false);
+      setError(`Message failed: ${e}`);
+    }
   }
 
   async function save() {
     if (!sessionId) return;
-    const { versionNo, deployable } = await api.saveGrillVersion(sessionId);
-    setSaved(`Saved v${versionNo}${deployable ? ' (deployable)' : ' (not yet deployable)'}`);
+    try {
+      const { versionNo, deployable } = await api.saveGrillVersion(sessionId);
+      setSaved(`Saved v${versionNo}${deployable ? ' (deployable)' : ' (not yet deployable)'}`);
+    } catch (e) {
+      setError(`Save failed: ${e}`);
+    }
   }
 
   return (
@@ -64,6 +78,7 @@ export function RefinePage() {
       </div>
       <div className="refine-bottom">
         <div className="refine-lint">
+          {error && <p className="lint-bad">{error}</p>}
           <LintPanel report={lint} busy={busy} onSuggest={send} />
           <div className="refine-footer">
             <button onClick={save} disabled={!sessionId}>Save version</button>

@@ -26,19 +26,21 @@ export function SystemPage() {
 
       <h2>Scheduler — next timer firings</h2>
       {timers.length === 0 ? <p className="muted">No armed timers.</p> : (
-        <table>
-          <thead><tr><th>Instance</th><th>Node</th><th>Fires at</th><th>In</th></tr></thead>
-          <tbody>
-            {timers.map((t) => (
-              <tr key={`${t.instanceId}:${t.nodeId}`}>
-                <td>{t.instanceId.slice(0, 8)}</td>
-                <td>{t.nodeId}</td>
-                <td>{new Date(t.expireAt).toLocaleString()}</td>
-                <td>{Math.max(0, Math.round((t.expireAt - Date.now()) / 1000))}s</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Instance</th><th>Node</th><th>Fires at</th><th>In</th></tr></thead>
+            <tbody>
+              {timers.map((t) => (
+                <tr key={`${t.instanceId}:${t.nodeId}`}>
+                  <td>{t.instanceId.slice(0, 8)}</td>
+                  <td>{t.nodeId}</td>
+                  <td>{new Date(t.expireAt).toLocaleString()}</td>
+                  <td>{Math.max(0, Math.round((t.expireAt - Date.now()) / 1000))}s</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h2>Platform logs</h2>

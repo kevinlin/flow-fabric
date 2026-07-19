@@ -311,6 +311,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 
 /* Primary fill — the clear "commit" action of a view */
 .chat-input button,
+.btn-start,
 .schema-form > button:last-child {
   background: var(--primary);
   color: var(--on-dark);
@@ -318,6 +319,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 }
 @media (hover: hover) and (pointer: fine) {
   .chat-input button:hover:not(:disabled),
+  .btn-start:hover:not(:disabled),
   .schema-form > button:last-child:hover:not(:disabled) { background: #2c2c34; border-color: #2c2c34; }
 }
 
@@ -351,7 +353,13 @@ button:disabled { opacity: 0.45; cursor: default; }
   transition: border-color 130ms var(--ease-out), background 130ms var(--ease-out);
 }
 .upload:hover { border-color: var(--ink); background: var(--soft-stone); }
-.upload input[type="file"] { font-size: 12px; }
+.upload:focus-within { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(23, 23, 28, 0.08); }
+/* The label is the affordance; the native input's "No file chosen" text is off-brand. */
+.upload input[type="file"] {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 
 /* ---- Forms --------------------------------------------------------------- */
 
@@ -711,6 +719,150 @@ tbody tr { transition: background 110ms var(--ease-out); }
 .node-done   .djs-visual > :nth-child(1) { stroke: var(--deep-green) !important; stroke-width: 3px !important; }
 .node-failed .djs-visual > :nth-child(1) { stroke: var(--error) !important; stroke-width: 3px !important; }
 .node-waiting .djs-visual > :nth-child(1) { stroke: var(--action-blue) !important; stroke-width: 3px !important; stroke-dasharray: 4 !important; }
+
+/* ---- Wide tables: scroll inside their own box, never the page ------------ */
+
+.table-scroll {
+  overflow-x: auto;
+  /* Let a dense table keep its natural column widths; the box scrolls, not the page. */
+  max-width: 100%;
+}
+.table-scroll > table { min-width: max-content; }
+
+/* ---- Page-level error fallback (ErrorBoundary) --------------------------- */
+
+.app-error { max-width: 640px; }
+.app-error-detail {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--error);
+  background: var(--pale-red);
+  border: 1px solid var(--coral-soft);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  margin: 14px 0 20px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- Loading skeletons (distinct from empty states) ---------------------- */
+
+.skeleton {
+  border-radius: var(--r-xs);
+  background: linear-gradient(100deg, var(--soft-stone) 30%, #f6f5f2 50%, var(--soft-stone) 70%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s var(--ease-out) infinite;
+}
+.skeleton-row { height: 14px; margin: 10px 0; }
+.skeleton-tile { height: 92px; border-radius: var(--r-md); }
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ---- Inline forms: start an instance, skip an incident ------------------- */
+/* Progressive disclosure inside the card that owns the action — the product's
+   answer to native prompt()/confirm(), which break the brand and the flow. */
+
+.inline-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--card-border);
+}
+.inline-form .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* Mono uppercase field label + inline control row (shared: dashboards, forms) */
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slate);
+}
+.field-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
+.inline-form input[type="text"] { flex: 1; min-width: 220px; }
+.inline-form textarea { width: 100%; min-height: 84px; }
+.inline-form .check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); cursor: pointer; }
+.inline-form .actions { display: flex; gap: 8px; align-items: center; }
+.inline-form .hint { font-size: 12.5px; color: var(--muted); }
+
+/* Two-step destructive confirm (replaces window.confirm on Delete) */
+.confirm-inline { display: inline-flex; align-items: center; gap: 8px; }
+.confirm-inline .q { font-size: 13px; color: var(--error); font-weight: 500; }
+
+/* ---- Transcript viewer (native <dialog>, escapes the stacking context) ---- */
+
+dialog.transcript {
+  width: min(860px, 92vw);
+  max-height: 82vh;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--canvas);
+  color: var(--ink);
+  overflow: hidden;
+}
+dialog.transcript::backdrop { background: rgba(23, 23, 28, 0.44); }
+dialog.transcript .dlg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+dialog.transcript .dlg-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slate);
+}
+dialog.transcript pre {
+  margin: 0;
+  padding: 16px 18px;
+  max-height: calc(82vh - 52px);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- Instance detail meta (status badge + workspace path) ---------------- */
+
+.instance-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 4px;
+}
+.instance-meta .workspace {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+/* Diagram fallback when XML imports but has no layout to render */
+.bpmn-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
 
 /* ---- Motion opt-out ------------------------------------------------------ */
 

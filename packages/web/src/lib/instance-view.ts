@@ -1,13 +1,26 @@
 import type { InstanceDto } from '@flowfabric/shared';
 
-/** Derive the "waiting" display label the engine has no status column for
- * (design data model defers instances.status='waiting' — the UI computes it). */
-export function deriveDisplayStatus(inst: InstanceDto, pendingUserTasks: number, armedTimers: number): string {
+/** Status as the UI shows it: a badge class (reused across Instances, Timeline,
+ * and Instance detail so one concept reads one way) plus a human label. The
+ * engine has no status='waiting' column — the UI derives it from pending user
+ * tasks / armed timers (design data model defers it). */
+export function deriveStatusView(
+  inst: InstanceDto,
+  pendingUserTasks: number,
+  armedTimers: number,
+): { badgeClass: string; label: string } {
   if (inst.status === 'running') {
-    if (pendingUserTasks > 0) return 'waiting (user task)';
-    if (armedTimers > 0) return 'waiting (timer)';
+    if (pendingUserTasks > 0) return { badgeClass: 'waiting', label: 'waiting · user task' };
+    if (armedTimers > 0) return { badgeClass: 'waiting', label: 'waiting · timer' };
   }
-  return inst.status;
+  return { badgeClass: inst.status, label: inst.status };
+}
+
+/** Plain-string label form, kept for callers that only need text. */
+export function deriveDisplayStatus(inst: InstanceDto, pendingUserTasks: number, armedTimers: number): string {
+  const { label } = deriveStatusView(inst, pendingUserTasks, armedTimers);
+  // Preserve the historical parenthesised phrasing for the text-only contract.
+  return label.replace('waiting · user task', 'waiting (user task)').replace('waiting · timer', 'waiting (timer)');
 }
 
 export function fmtDuration(ms: number | null): string {

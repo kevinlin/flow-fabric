@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType, type SVGProps } from 'react';
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { DefinitionsPage } from './pages/DefinitionsPage';
 import { RefinePage } from './pages/RefinePage';
 import { InstancesPage } from './pages/InstancesPage';
@@ -38,6 +39,7 @@ function readCollapsed(): boolean {
 
 export function App() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  const location = useLocation();
 
   useEffect(() => {
     try {
@@ -90,16 +92,18 @@ export function App() {
         </div>
       </nav>
       <main className="content" id="main-content">
-        <Routes>
-          <Route path="/" element={<Navigate to="/definitions" replace />} />
-          <Route path="/definitions" element={<DefinitionsPage />} />
-          <Route path="/definitions/:id/refine" element={<RefinePage />} />
-          <Route path="/instances" element={<InstancesPage />} />
-          <Route path="/instances/:id" element={<InstanceDetailPage />} />
-          <Route path="/inbox" element={<InboxPage />} />
-          <Route path="/dashboards" element={<DashboardsPage />} />
-          <Route path="/system" element={<SystemPage />} />
-        </Routes>
+        <ErrorBoundary resetKey={location.pathname}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/definitions" replace />} />
+            <Route path="/definitions" element={<DefinitionsPage />} />
+            <Route path="/definitions/:id/refine" element={<RefinePage />} />
+            <Route path="/instances" element={<InstancesPage />} />
+            <Route path="/instances/:id" element={<InstanceDetailPage />} />
+            <Route path="/inbox" element={<InboxPage />} />
+            <Route path="/dashboards" element={<DashboardsPage />} />
+            <Route path="/system" element={<SystemPage />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
     </div>
   );
