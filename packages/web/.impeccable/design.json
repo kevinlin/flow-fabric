@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-19T00:00:00Z",
+  "title": "Design System: Flow Fabric",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Graphite Near-Black",
+        "canonical": "#17171c",
+        "tonalRamp": ["#0a0a0d", "#131317", "#17171c", "#26262d", "#3a3a44", "#5c5c68", "#93939f", "#e5e7eb"]
+      },
+      "deep-green": {
+        "role": "primary",
+        "displayName": "Command Rail Green",
+        "canonical": "#003c33",
+        "tonalRamp": ["#001a16", "#002620", "#00312a", "#003c33", "#0a5f52", "#1f8574", "#86c4b7", "#edfce9"]
+      },
+      "action-blue": {
+        "role": "secondary",
+        "displayName": "Signal Blue",
+        "canonical": "#1863dc",
+        "tonalRamp": ["#0a2b66", "#0f3f96", "#1552bd", "#1863dc", "#4c6ee6", "#7d97ee", "#b9c8f6", "#f1f5ff"]
+      },
+      "coral": {
+        "role": "secondary",
+        "displayName": "Incident Coral",
+        "canonical": "#ff7759",
+        "tonalRamp": ["#7a2612", "#a8391f", "#d9502f", "#ff7759", "#ff9478", "#ffad9b", "#ffcfc3", "#fdf1f0"]
+      },
+      "amber": {
+        "role": "tertiary",
+        "displayName": "Running Amber",
+        "canonical": "#b26a00",
+        "tonalRamp": ["#4d2e00", "#6e4200", "#8f5500", "#b26a00", "#cf8420", "#e0a44a", "#f0cd94", "#fbf3e6"]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Alert Red",
+        "canonical": "#b30000",
+        "tonalRamp": ["#4d0000", "#6e0000", "#8f0000", "#b30000", "#d43333", "#e57373", "#f2b3b3", "#fdf1f0"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#212121",
+        "tonalRamp": ["#121212", "#212121", "#3a3a3a", "#616161", "#8a8a8a", "#b0b0b0", "#d9d9dd", "#f2f2f2"]
+      },
+      "soft-stone": {
+        "role": "neutral",
+        "displayName": "Soft Stone",
+        "canonical": "#eeece7",
+        "tonalRamp": ["#3a3830", "#565349", "#736f61", "#98937f", "#bcb7a5", "#d8d4c7", "#eeece7", "#f8f7f3"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles (h1). Weight 400; size and tracking carry the hierarchy." },
+      "metric": { "displayName": "Metric", "purpose": "Dashboard tile values. Tabular numerics." },
+      "headline": { "displayName": "Headline", "purpose": "Card titles, definition names, sidebar brand." },
+      "body": { "displayName": "Body", "purpose": "Human-readable prose. 65-75ch." },
+      "control": { "displayName": "Control", "purpose": "Buttons, tabs, inputs, nav links." },
+      "label": { "displayName": "Mono Label", "purpose": "Uppercase system markers: table headers, badges, section labels, tile captions." },
+      "data": { "displayName": "Mono Data", "purpose": "Inline code, JSON value cells, platform logs." }
+    },
+    "shadows": [
+      { "name": "soft-lift", "value": "0 1px 2px rgba(23,23,28,0.04), 0 2px 6px rgba(23,23,28,0.05)", "purpose": "The single ambient shadow. Card hover (with a 1px translateY) and floating BPMN zoom controls. Signals interactive, never important." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Default exponential ease-out for all state transitions (130-150ms). No bounce, no elastic." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single commit action of a view (send, submit). Near-black pill at rest.",
+      "html": "<button class=\"ds-btn-primary\">Deploy version</button>",
+      "css": ".ds-btn-primary { font-family: var(--font-body); font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--on-dark); background: var(--primary); border: 1px solid var(--primary); border-radius: var(--r-pill); padding: 7px 16px; cursor: pointer; transition: background 130ms var(--ease-out), transform 90ms var(--ease-out); } .ds-btn-primary:hover { background: #2c2c34; border-color: #2c2c34; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus-blue); outline-offset: 2px; }"
+    },
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Every non-commit action. Outline at rest; firm inversion to near-black on hover.",
+      "html": "<button class=\"ds-btn\">Abort instance</button>",
+      "css": ".ds-btn { font-family: var(--font-body); font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--ink); background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 7px 16px; cursor: pointer; transition: background 130ms var(--ease-out), color 130ms var(--ease-out), border-color 130ms var(--ease-out), transform 90ms var(--ease-out); } .ds-btn:hover { background: var(--primary); color: var(--on-dark); border-color: var(--primary); } .ds-btn:active { transform: scale(0.97); } .ds-btn:focus-visible { outline: 2px solid var(--focus-blue); outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-running",
+      "description": "Instance/token state pill. One pale wash per semantic hue; shown here in the running state.",
+      "html": "<span class=\"ds-status ds-status-running\">running</span> <span class=\"ds-status ds-status-waiting\">waiting</span> <span class=\"ds-status ds-status-completed\">completed</span> <span class=\"ds-status ds-status-incident\">incident</span>",
+      "css": ".ds-status { display: inline-block; font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.03em; padding: 3px 10px; border-radius: var(--r-pill); text-transform: lowercase; margin-right: 6px; } .ds-status-running { background: var(--pale-amber); color: var(--amber); } .ds-status-waiting { background: var(--pale-blue); color: var(--action-blue); } .ds-status-completed { background: var(--pale-green); color: var(--deep-green); } .ds-status-incident { background: var(--pale-red); color: var(--error); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Definition / inbox card. Flat at rest, one soft lift on hover.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-head\">rfp-daily-routine</div><p class=\"ds-card-body\">Version 4 · deployable · 7 instances run</p></div>",
+      "css": ".ds-card { background: var(--canvas); border: 1px solid var(--border-light); border-radius: var(--r-md); padding: 20px 22px; transition: box-shadow 150ms var(--ease-out), transform 150ms var(--ease-out); } .ds-card:hover { box-shadow: 0 1px 2px rgba(23,23,28,0.04), 0 2px 6px rgba(23,23,28,0.05); transform: translateY(-1px); } .ds-card-head { font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 8px; color: var(--ink); } .ds-card-body { margin: 0; font-family: var(--font-body); font-size: 14px; color: var(--muted); }"
+    },
+    {
+      "name": "Incident Card",
+      "kind": "card",
+      "refersTo": "card-incident",
+      "description": "The loudest card in the system. Whole-border coral over a pale-red wash, no side stripe.",
+      "html": "<div class=\"ds-card-incident\"><div class=\"ds-card-head\">Incident · validate-tracker</div><p class=\"ds-reason\">output failed schema validation after 3 retries</p></div>",
+      "css": ".ds-card-incident { background: var(--pale-red); border: 1px solid var(--coral); border-radius: var(--r-md); padding: 20px 22px; } .ds-card-incident .ds-card-head { font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 8px; color: var(--ink); } .ds-reason { margin: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--error); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Form field. Hairline border; tactile violet focus glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"workspace path\" />",
+      "css": ".ds-input { font-family: var(--font-body); font-size: 14px; color: var(--ink); background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-sm); padding: 8px 12px; transition: border-color 130ms var(--ease-out), box-shadow 130ms var(--ease-out); } .ds-input::placeholder { color: var(--muted); } .ds-input:focus { outline: none; border-color: var(--form-focus); box-shadow: 0 0 0 3px rgba(155,96,170,0.18); }"
+    },
+    {
+      "name": "Dashboard Tile",
+      "kind": "custom",
+      "refersTo": "tile",
+      "description": "Metric tile: Space Grotesk value over a mono uppercase caption on soft stone.",
+      "html": "<div class=\"ds-tile\"><div class=\"ds-tile-value\">98.2%</div><div class=\"ds-tile-label\">success rate</div></div>",
+      "css": ".ds-tile { background: var(--soft-stone); border-radius: var(--r-md); padding: 20px 22px; display: inline-block; } .ds-tile-value { font-family: var(--font-display); font-size: 32px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); } .ds-tile-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--slate); margin-top: 10px; }"
+    },
+    {
+      "name": "Sidebar Nav Link",
+      "kind": "nav",
+      "refersTo": "sidebar-link",
+      "description": "Command-rail link. White-on-green, never gray; the active route holds a stronger overlay.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-link ds-rail-active\" href=\"#\">Instances</a><a class=\"ds-rail-link\" href=\"#\">Inbox</a><a class=\"ds-rail-link\" href=\"#\">Dashboards</a></nav>",
+      "css": ".ds-rail { background: var(--deep-green); padding: 18px; border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 2px; width: 200px; } .ds-rail-link { color: rgba(255,255,255,0.66); text-decoration: none; font-family: var(--font-body); font-size: 14px; font-weight: 500; padding: 9px 12px; border-radius: var(--r-sm); transition: background 130ms var(--ease-out), color 130ms var(--ease-out); } .ds-rail-link:hover { color: #fff; background: rgba(255,255,255,0.07); } .ds-rail-active { color: #fff; background: rgba(255,255,255,0.13); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operator's Ledger",
+    "overview": "Flow Fabric is the control plane for AI Developer Workflows, and its interface is the append-only record made legible. Every state transition of every instance is written down and never erased; the UI's whole job is to render that ledger so a single operator, glancing in for five seconds, knows exactly what is running, where each token sits, what it cost, and what failed. A white editorial canvas holds the record; a deep-green rail runs down the left as the persistent command spine; monospace labels mark every system value the way a ledger marks its columns; numbers are tabular so they never jitter as they update. The register is product: the tool disappears into the task. It stays quiet at rest and reserves its one loud voice for the incident, which becomes the most saturated thing on the page the instant it appears. This is command-center vigilance under editorial restraint. Because every screen doubles as a live client demo, there is no rough internal tier; polish is the floor.",
+    "keyCharacteristics": [
+      "White canvas record, one persistent deep-green command rail, hairlines instead of shadows.",
+      "Monospace uppercase labels on every system value; sentence-case sans reserved for human prose.",
+      "Weight-400 display type: hierarchy from size and negative tracking, not bold.",
+      "Tabular numerics everywhere a value can change (cost, duration, counts, tokens).",
+      "A pale, quiet status vocabulary that goes saturated only for incidents.",
+      "Pill-shaped controls; the single commit action of a view fills near-black."
+    ],
+    "rules": [
+      { "name": "The Rail Rule", "body": "Command Rail Green is the one committed color permitted to hold a large surface (the nav rail, data bars). Every other saturated color earns its place by mapping to a specific instance state, never decoration.", "section": "colors" },
+      { "name": "The Quiet-Until-Wrong Rule", "body": "State tints stay pale by default. Saturation is a signal, not a style: only running amber and, above all, incident coral/red are allowed to raise their voice, because they are the only states that demand a human.", "section": "colors" },
+      { "name": "The Mono-Label Rule", "body": "Every system value (table header, status badge, metric caption, section marker) is uppercase monospace. Sentence-case sans is reserved for text a human wrote or reads as prose. This is what makes the interface read as a ledger rather than a dashboard.", "section": "typography" },
+      { "name": "The Weight-400 Display Rule", "body": "Display type is never bold. Space Grotesk at 400-500 carries every heading; size and negative tracking do the hierarchy work.", "section": "typography" },
+      { "name": "The Hairline-Over-Shadow Rule", "body": "Structure is drawn with 1px rules and surface changes, not drop shadows. A card is defined by its border and its radius; it earns the Soft Lift only while hovered.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do reserve the one near-black pill for the single commit action of each view; make everything else an outline until hover.",
+      "Do set every system value (table headers, status badges, metric captions, section markers) in uppercase monospace, and every human-readable string in Inter.",
+      "Do use font-variant-numeric: tabular-nums on every number that can change (cost, duration, counts, tokens) so columns never jitter as the ledger updates.",
+      "Do draw structure with the three hairline weights and surface alternation; let the single Soft Lift appear only on hover.",
+      "Do keep status tints pale by default and let only running (amber) and incident (coral/red) carry saturation.",
+      "Do hold muted body copy at #616161 or darker on white; keep body text at least 4.5:1 and large text at least 3:1 (WCAG 2.1 AA), including placeholders.",
+      "Do give every interactive element visible keyboard focus and a prefers-reduced-motion fallback."
+    ],
+    "donts": [
+      "Don't use border-left or border-right greater than 1px as a colored accent stripe on cards, alerts, or list items. State changes recolor the whole border and tint the fill.",
+      "Don't import flashy consumer-AI marketing: no gradient hero text, no big-number hero-metric templates, no chatbot-cute styling, no sparkle.",
+      "Don't drift toward a terminal / hacker look: no neon-on-black, no IDE-console cosplay. The one dark surface is the platform-log panel, and it is a quiet graphite.",
+      "Don't bold display type to add emphasis; if a heading needs weight, it needs size or space, not 700.",
+      "Don't put gray text on the green rail or on any colored field; use white or the field's own darker shade.",
+      "Don't add drop shadows to separate surfaces; change the surface tone or add a hairline instead.",
+      "Don't saturate inactive states; a resting badge, an idle tab, a completed row stays pale."
+    ]
+  }
+}
