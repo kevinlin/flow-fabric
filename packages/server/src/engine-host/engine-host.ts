@@ -11,6 +11,13 @@ import type { Notifier } from '../notify/notifier.js';
 import { validateOutput } from '../runners/validate.js';
 
 const SNAPSHOT_EVENTS = ['activity.start', 'activity.wait', 'activity.timer', 'activity.end'];
+const TIMER_CLEAR_EVENTS = ['activity.timeout', 'activity.end', 'activity.error'];
+
+export interface ArmedTimer {
+  instanceId: string;
+  nodeId: string;
+  expireAt: number;
+}
 
 /** The dispatch hooks (extensions/scripts) and custom moddle exceed
  * bpmn-engine's published option types; cast at the engine boundary only. */
@@ -51,8 +58,14 @@ export class EngineHost {
   private holds = new Map<string, Hold>();
   private aborting = new Set<string>();
   private terminated = new Set<string>();
+  private timers = new Map<string, ArmedTimer>();
 
   constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {}
+
+  /** Armed duration timers across all running instances (FR-25 scheduler view). */
+  scheduledTimers(): ArmedTimer[] {
+    return [...this.timers.values()].sort((a, b) => a.expireAt - b.expireAt);
+  }
 
   /**
    * Start a new instance. Resolves on completion or stop; rejects on engine error.
@@ -226,6 +239,11 @@ export class EngineHost {
         this.store.appendEvent(id, event, api.id);
         if (this.profiles.get(id)?.terminateEnds.has(api.id)) this.terminated.add(id);
         snapshot();
+        if (event === 'activity.timer') {
+          const content = (api as { content?: { expireAt?: string | number | Date } }).content;
+          const expireAt = content?.expireAt ? new Date(content.expireAt).getTime() : Date.now();
+          this.timers.set(`${id}:${api.id}`, { instanceId: id, nodeId: api.id, expireAt });
+        }
         if (event === 'activity.wait') {
           const contract = this.profiles.get(id)?.contracts.get(api.id);
           if (contract?.kind === 'user') {
@@ -233,6 +251,9 @@ export class EngineHost {
           }
         }
       });
+    }
+    for (const event of TIMER_CLEAR_EVENTS) {
+      listener.on(event, (api: { id: string }) => this.timers.delete(`${id}:${api.id}`));
     }
 
     const outcome = new Promise<'end' | 'stop'>((resolve, reject) => {
@@ -267,6 +288,7 @@ export class EngineHost {
       this.store.appendEvent(id, 'engine.error', undefined, String(err));
       throw err;
     } finally {
+      for (const key of this.timers.keys()) if (key.startsWith(`${id}:`)) this.timers.delete(key);
       this.running.delete(id);
     }
   }

@@ -151,6 +151,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
     store.metricsForDefinition((req.params as { id: string }).id),
   );
 
+  app.get('/api/scheduler', async () => ({ timers: host.scheduledTimers() }));
+
   if (definitions) {
     app.post('/api/definitions', async (req, reply) => {
       const { name, xml } = req.body as { name: string; xml: string };
