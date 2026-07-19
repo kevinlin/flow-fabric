@@ -43,7 +43,7 @@ pnpm --filter @flowfabric/server test resume   # one test file by name substring
 cd packages/server && node --import tsx scripts/probe-timecycle.ts   # also: probe-dispatch.ts
 ```
 
-Test files: `packages/server/test/*.test.ts` — M1 engine (`smoke`, `engine-basics`, `persistence`, `resume`, `loop`) and M2 (`profile-read`, `stub-runner`, `code-runner`, `agent-runner`, `dispatch`, `failure-ladder`, `user-tasks`, `timeline`, `api`). Fixtures in `test/fixtures/*.bpmn`. `AgentRunner` tests inject a mock `AgentQueryFn` — no live SDK calls.
+Tests: server in `packages/server/test/*.test.ts` (one file per module — engine, runners, dispatch, failure ladder, linter, patch-ops, grill, metrics/scheduler/logs, SSE vocab); web pure-lib + `@testing-library/react` component tests under `packages/web/src`; shared types in `packages/shared`. Fixtures in `packages/server/test/fixtures/*.bpmn`. `AgentRunner` tests inject a mock `AgentQueryFn` — no live SDK calls.
 
 ## Architecture
 
@@ -78,14 +78,14 @@ Every task goes through a `RunTaskFn` seam:
 
 **API surface** ([api/server.ts](packages/server/src/api/server.ts), Fastify): `POST /api/instances` (start; 409 on workspace lock; records definition linkage), `GET /api/instances[/:id]` (instance + timeline + events), `POST /api/instances/:id/abort`, `GET /api/inbox`, `POST /api/user-tasks/:id/submit`, `POST /api/incidents/:id/resolve`, `GET /api/events` (SSE, fanned out from `InstanceStore.onEvent`), plus M4 reads: `GET /api/metrics/definitions/:id`, `GET /api/scheduler`, `GET /api/logs`, `GET /api/definitions/:id/versions`, `GET /api/grill/sessions/:id`, `GET /api/task-executions/:id/transcript`. Non-`/api` GETs serve the built SPA (`@fastify/static`, `webRoot` = `packages/web/dist`).
 
-## bpmn-engine gotchas (from the M1 spike — see [plan_m1-engine-spike.md § Spike Findings](docs/specs/plan_m1-engine-spike.md#spike-findings))
+## bpmn-engine gotchas
 
-These are load-bearing and easy to get wrong:
+Load-bearing and easy to get wrong. Full rationale + probe evidence live in the plan files — load [plan_m1-engine-spike.md § Spike Findings](docs/specs/plan_m1-engine-spike.md#spike-findings) (engine) and [plan_m2-runners-failure-ladder.md](docs/specs/plan_m2-runners-failure-ladder.md) (dispatch seams) when working on those areas. The traps:
 
-- **`getState()` is async.** Concurrent snapshots interleave and corrupt state. `EngineHost` serializes them through a promise queue — preserve that pattern.
-- **Timer intermediate catch events never emit `activity.wait`.** Arm signal is `activity.timer`, fire signal is `activity.timeout`. Anything watching for waiting timers must key on `activity.timer`, not `activity.wait`.
-- **`timeCycle` (e.g. `R3/PT2S`) is not usable for recurrence.** bpmn-engine fires it once and ignores the repeat count. The profile is restricted to `timeDuration` timers only; model recurrence as a gateway loop around a duration timer (the shape `rfp-daily` uses).
-- **Gateway conditions** use `language="javascript"` with `next(null, <bool>)` over process variables, e.g. `next(null, this.environment.variables.count < 3)`. These survive resume.
+- **`getState()` is async.** Serialize concurrent snapshots through a queue (as `EngineHost` does) or writes interleave and corrupt state.
+- **Timer catch events never emit `activity.wait`.** Arm on `activity.timer`, fire on `activity.timeout`. Watch `activity.timer`, not `activity.wait`.
+- **`timeCycle` is not usable for recurrence.** Fires once, ignores the repeat count. Profile is `timeDuration`-only; model recurrence as a gateway loop around a duration timer (the `rfp-daily` shape).
+- **Gateway conditions** use `language="javascript"` with `next(null, <bool>)` over process variables; they survive resume.
 
 ## Flow Fabric BPMN profile (design §4)
 
@@ -107,12 +107,11 @@ These are load-bearing and easy to get wrong:
 
 ## Docs map
 
-Read the spec before extending anything — most of the system is designed but unbuilt.
+[docs/specs/index.md](docs/specs/index.md) is the canonical navigation map — start there. Read the relevant spec before extending: M1–M4 are built, only M5 (OTel + soak) is still spec. Milestone-specific findings and gotchas live in the plan files; load them on demand.
 
 - [docs/product/prd_flow-fabric.md](docs/product/prd_flow-fabric.md) — PRD: problem, goals (G1–G3), requirements (FR-1..25), v1 scope
 - [docs/specs/design_flow-fabric.md](docs/specs/design_flow-fabric.md) — approved design: modules, profile, data model, execution semantics, failure ladder
 - [docs/specs/impl_flow-fabric.md](docs/specs/impl_flow-fabric.md) — five milestones (M1–M5), each with a verification gate
-- [docs/specs/plan_m1-engine-spike.md](docs/specs/plan_m1-engine-spike.md) — M1 plan (done, compacted) + spike findings + GO verdict
-- [docs/specs/plan_m2-runners-failure-ladder.md](docs/specs/plan_m2-runners-failure-ladder.md) — M2 plan (done, compacted) + dispatch spike findings
+- Plans (all done, compacted post-ship): [M1 engine spike](docs/specs/plan_m1-engine-spike.md) (+ spike findings, GO verdict), [M2 runners + failure ladder](docs/specs/plan_m2-runners-failure-ladder.md) (+ dispatch spike findings), [M3 intake](docs/specs/plan_m3-intake.md), [M4 web UI](docs/specs/plan_m4-web-ui.md) (+ build findings for M5)
 
 `Input/` and `Output/` are git-ignored. The two real BPMN files (`Input/bpmn/rfp-daily-routine.bpmn`, the flagship Signavio export, and `interview-process.bpmn`, the intake generality case) live locally but aren't tracked.
