@@ -111,4 +111,3 @@ Built the interactive grill CLI (`packages/server/scripts/grill-cli.ts`) — rea
 ## Changelog
 
 - 2026-07-19 — **Compacted post-implementation.** Removed step-by-step tasks, file-by-file diffs, code snippets, and verification commands now that the feature has shipped. Preserved Goal, Architecture, Design Decisions, Critical Files summary, and follow-ups. Original plan recoverable via git history.
-- 2026-07-18 — Initial plan.
