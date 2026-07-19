@@ -34,3 +34,11 @@ export { validateOutput, OutputValidationError } from './runners/validate.js';
 export type { EngineHostOptions } from './engine-host/engine-host.js';
 export { createDispatch, makeSingleAttemptRunTask, resolveInputs } from './engine-host/dispatch.js';
 export type { DispatchDeps, RunnerSet, RunTaskFn, EngineEnvironment } from './engine-host/dispatch.js';
+export { initTelemetry, NOOP_TELEMETRY, OtelTelemetry } from './telemetry/telemetry.js';
+export type {
+  Telemetry,
+  TaskExecutionTelemetry,
+  InstanceEndTelemetry,
+  OtelTelemetryOptions,
+} from './telemetry/telemetry.js';
+export { traceIdFor, instanceSpanIdFor } from './telemetry/ids.js';
