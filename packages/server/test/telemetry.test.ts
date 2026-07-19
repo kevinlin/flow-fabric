@@ -108,3 +108,67 @@ describe('task-execution spans + metrics', () => {
     await telemetry.shutdown();
   });
 });
+
+describe('instance root span + run metrics', () => {
+  it('emits the root span with deterministic ids and event-log span events', async () => {
+    const { telemetry, spans, metricByName } = makeTelemetry();
+    telemetry.taskExecution({
+      instanceId: 'inst-9', nodeId: 'Task_a', actor: 'code', attempt: 1,
+      status: 'completed', startedAt: 100, endedAt: 200,
+    });
+    telemetry.instanceEnded({
+      instanceId: 'inst-9',
+      name: 'rfp-daily',
+      status: 'terminated',
+      // Non-zero start: the OTel SDK treats startTime:0 as falsy and
+      // substitutes Date.now(); production passes row.createdAt (a real epoch).
+      startedAt: 1_000,
+      endedAt: 6_000,
+      definitionId: 'def-1',
+      versionNo: 3,
+      dryRun: false,
+      events: [
+        { type: 'activity.start', elementId: 'Task_a', ts: 100 },
+        { type: 'activity.end', elementId: 'Task_a', ts: 200 },
+      ],
+    });
+    await telemetry.flush();
+
+    const root = spans.getFinishedSpans().find((s) => s.name === 'rfp-daily')!;
+    expect(root.spanContext().traceId).toBe(traceIdFor('inst-9'));
+    expect(root.spanContext().spanId).toBe(instanceSpanIdFor('inst-9'));
+    expect(root.attributes['ff.status']).toBe('terminated');
+    expect(root.attributes['ff.definition_id']).toBe('def-1');
+    expect(root.events.map((e) => e.name)).toEqual([
+      'activity.start Task_a',
+      'activity.end Task_a',
+    ]);
+    expect(hrToMs(root.startTime)).toBe(1_000);
+    expect(hrToMs(root.endTime)).toBe(6_000);
+
+    // the task span from before shares the trace and points at this root
+    const task = spans.getFinishedSpans().find((s) => s.name === 'Task_a')!;
+    expect(task.spanContext().traceId).toBe(root.spanContext().traceId);
+    expect(task.parentSpanContext?.spanId).toBe(root.spanContext().spanId);
+
+    const dur = metricByName('ff.run.duration')!;
+    expect((dur as any).dataPoints[0].value.sum).toBe(5_000);
+    expect((dur as any).dataPoints[0].attributes).toMatchObject({ status: 'terminated' });
+    await telemetry.shutdown();
+  });
+
+  it('marks aborted/error instances as ERROR and counts incidents', async () => {
+    const { telemetry, spans, metricByName } = makeTelemetry();
+    telemetry.incidentRaised('Task_flaky');
+    telemetry.instanceEnded({
+      instanceId: 'inst-x', name: 'run', status: 'aborted',
+      startedAt: 0, endedAt: 10, dryRun: true, events: [],
+    });
+    await telemetry.flush();
+    expect(spans.getFinishedSpans()[0].status.code).toBe(SpanStatusCode.ERROR);
+    const inc = metricByName('ff.incidents')!;
+    expect((inc as any).dataPoints[0].value).toBe(1);
+    expect((inc as any).dataPoints[0].attributes).toMatchObject({ node_id: 'Task_flaky' });
+    await telemetry.shutdown();
+  });
+});

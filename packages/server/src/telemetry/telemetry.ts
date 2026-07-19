@@ -125,12 +125,31 @@ export class OtelTelemetry implements Telemetry {
     if (t.costUsd !== undefined) this.taskCost.record(t.costUsd, { node_id: t.nodeId });
   }
 
-  instanceEnded(_t: InstanceEndTelemetry): void {
-    // Task 3
+  instanceEnded(t: InstanceEndTelemetry): void {
+    // The root span owns the deterministic ids; force() + startSpan is synchronous.
+    this.ids.force(traceIdFor(t.instanceId), instanceSpanIdFor(t.instanceId));
+    const span = this.tracer.startSpan(t.name, {
+      startTime: t.startedAt,
+      attributes: {
+        'ff.instance_id': t.instanceId,
+        'ff.status': t.status,
+        'ff.dry_run': t.dryRun,
+        ...(t.definitionId !== undefined && { 'ff.definition_id': t.definitionId }),
+        ...(t.versionNo !== undefined && { 'ff.version_no': t.versionNo }),
+      },
+    });
+    for (const e of t.events) {
+      span.addEvent(e.elementId ? `${e.type} ${e.elementId}` : e.type, undefined, e.ts);
+    }
+    if (t.status === 'aborted' || t.status === 'error') {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: t.status });
+    }
+    span.end(t.endedAt);
+    this.runDuration.record(t.endedAt - t.startedAt, { status: t.status });
   }
 
-  incidentRaised(_nodeId: string): void {
-    // Task 3
+  incidentRaised(nodeId: string): void {
+    this.incidents.add(1, { node_id: nodeId });
   }
 
   async flush(): Promise<void> {
