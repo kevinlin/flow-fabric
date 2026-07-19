@@ -18,15 +18,17 @@ const NAV = [
 export function App() {
   return (
     <div className="shell">
-      <nav className="sidebar">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <nav className="sidebar" aria-label="Primary">
         <div className="brand">Flow Fabric</div>
+        <div className="tagline">Control Plane</div>
         {NAV.map(([to, label]) => (
           <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'active' : '')}>
             {label}
           </NavLink>
         ))}
       </nav>
-      <main className="content">
+      <main className="content" id="main-content">
         <Routes>
           <Route path="/" element={<Navigate to="/definitions" replace />} />
           <Route path="/definitions" element={<DefinitionsPage />} />
