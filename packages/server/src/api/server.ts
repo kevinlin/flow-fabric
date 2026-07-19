@@ -5,6 +5,7 @@ import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
 import type { DefinitionStore } from '../definitions/store.js';
 import type { GrillHost } from '../grill/session.js';
+import type { LogRing } from '../logs/ring.js';
 import { lint } from '../linter/lint.js';
 import { OutputValidationError } from '../runners/validate.js';
 
@@ -14,10 +15,13 @@ export interface ApiDeps {
   inbox: Inbox;
   definitions?: DefinitionStore;
   grill?: GrillHost;
+  logRing?: LogRing;
 }
 
-export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): FastifyInstance {
-  const app = Fastify();
+export function buildApi({ store, host, inbox, definitions, grill, logRing }: ApiDeps): FastifyInstance {
+  const app = Fastify(
+    logRing ? { logger: { level: 'info', stream: logRing } } : {},
+  );
 
   app.get('/api/healthz', async () => ({ ok: true }));
 
@@ -152,6 +156,11 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
   );
 
   app.get('/api/scheduler', async () => ({ timers: host.scheduledTimers() }));
+
+  app.get('/api/logs', async (req) => {
+    const { limit } = req.query as { limit?: string };
+    return { lines: logRing?.lines(limit ? Number(limit) : undefined) ?? [] };
+  });
 
   if (definitions) {
     app.post('/api/definitions', async (req, reply) => {
