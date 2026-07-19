@@ -23,3 +23,7 @@ button { cursor: pointer; }
 .tile-label { font-size: 12px; color: #666; }
 .bars { display: flex; flex-direction: column; gap: 4px; }
 .bar { background: #1565c0; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 3px; min-width: 40px; white-space: nowrap; }
+.logs { font-family: ui-monospace, monospace; font-size: 12px; background: #111; color: #ddd; padding: 12px; border-radius: 8px; max-height: 320px; overflow: auto; }
+.log-level { display: inline-block; width: 44px; color: #888; }
+.log-warn .log-level { color: #d98300; }
+.log-error .log-level, .log-fatal .log-level { color: #ff6b6b; }
