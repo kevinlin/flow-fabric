@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
@@ -162,6 +163,17 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing }: Ap
     return { lines: logRing?.lines(limit ? Number(limit) : undefined) ?? [] };
   });
 
+  app.get('/api/task-executions/:id/transcript', async (req, reply) => {
+    const exec = store.getTaskExecution(Number((req.params as { id: string }).id));
+    if (!exec?.transcriptPath) return reply.code(404).send({ error: 'no transcript' });
+    try {
+      reply.header('content-type', 'text/plain');
+      return readFileSync(exec.transcriptPath, 'utf8');
+    } catch {
+      return reply.code(404).send({ error: 'transcript file missing' });
+    }
+  });
+
   if (definitions) {
     app.post('/api/definitions', async (req, reply) => {
       const { name, xml } = req.body as { name: string; xml: string };
@@ -170,6 +182,10 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing }: Ap
     });
 
     app.get('/api/definitions', async () => ({ definitions: definitions.listDefinitions() }));
+
+    app.get('/api/definitions/:id/versions', async (req) => ({
+      versions: definitions.listVersions((req.params as { id: string }).id),
+    }));
 
     app.get('/api/definitions/:id/versions/:v', async (req, reply) => {
       const { id, v } = req.params as { id: string; v: string };
@@ -199,6 +215,12 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing }: Ap
       } catch (err) {
         return reply.code(404).send({ error: String(err) });
       }
+    });
+
+    app.get('/api/grill/sessions/:id', async (req, reply) => {
+      const session = grill.get((req.params as { id: string }).id);
+      if (!session) return reply.code(404).send({ error: 'no such session' });
+      return { sessionId: session.id, xml: session.xml, lint: session.lintReport };
     });
 
     app.post('/api/grill/sessions/:id/messages', async (req, reply) => {

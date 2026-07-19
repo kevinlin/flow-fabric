@@ -125,6 +125,17 @@ export class DefinitionStore {
     return row ? coerce(row) : undefined;
   }
 
+  listVersions(definitionId: string): Array<{ versionNo: number; deployable: boolean; createdAt: number }> {
+    return (
+      this.db
+        .prepare(
+          `SELECT version_no AS versionNo, deployable, created_at AS createdAt
+           FROM definition_versions WHERE definition_id = ? ORDER BY version_no`,
+        )
+        .all(definitionId) as Array<{ versionNo: number; deployable: number; createdAt: number }>
+    ).map((r) => ({ versionNo: r.versionNo, deployable: !!r.deployable, createdAt: r.createdAt }));
+  }
+
   getLatestVersion(definitionId: string): DefinitionVersionRow | undefined {
     const row = this.db
       .prepare(

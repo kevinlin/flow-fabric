@@ -362,6 +362,12 @@ export class InstanceStore {
       );
   }
 
+  getTaskExecution(id: number): TaskExecutionRow | undefined {
+    return this.db
+      .prepare(`SELECT ${TASK_EXECUTION_COLUMNS} FROM task_executions WHERE id = ?`)
+      .get(id) as TaskExecutionRow | undefined;
+  }
+
   listTaskExecutions(instanceId: string): TaskExecutionRow[] {
     return this.db
       .prepare(`SELECT ${TASK_EXECUTION_COLUMNS} FROM task_executions WHERE instance_id = ? ORDER BY id`)
