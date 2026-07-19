@@ -446,14 +446,27 @@ tbody tr { transition: background 110ms var(--ease-out); }
 
 /* ---- Refine: diagram + grill chat ---------------------------------------- */
 
+.content > .refine { max-width: none; } /* diagram spans the whole content area */
 .refine {
-  display: grid;
-  grid-template-columns: 1fr 400px;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   height: calc(100vh - 80px);
 }
-.refine-diagram { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.refine-diagram > button { align-self: flex-start; }
+/* Top row: diagram spans the full width. */
+.refine-top { flex: 3 1 0; min-height: 0; display: flex; }
+.refine-top .bpmn-canvas { flex: 1; aspect-ratio: auto; height: 100%; min-height: 0; }
+/* Bottom row: lint panel | grill chat. */
+.refine-bottom {
+  flex: 2 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.refine-bottom > * { min-width: 0; min-height: 0; }
+.refine-lint { display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+.refine-footer { display: flex; align-items: center; gap: 12px; }
 
 .refine-chat {
   display: flex;
@@ -525,13 +538,36 @@ tbody tr { transition: background 110ms var(--ease-out); }
 /* ---- BPMN canvas + live token markers ------------------------------------ */
 
 .bpmn-canvas {
-  height: 480px;
-  flex: 1;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 360px;
   border: 1px solid var(--hairline);
   border-radius: var(--r-md);
   background: #fbfbfa;
   overflow: hidden;
 }
+.bpmn-viewport { position: absolute; inset: 0; }
+.bpmn-zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+}
+.bpmn-zoom button {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 15px;
+  line-height: 1;
+  background: var(--canvas);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-xs);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.bpmn-zoom button:hover { background: var(--soft-stone); }
 .node-running .djs-visual > :nth-child(1) { stroke: var(--amber) !important; stroke-width: 3px !important; }
 .node-done   .djs-visual > :nth-child(1) { stroke: var(--deep-green) !important; stroke-width: 3px !important; }
 .node-failed .djs-visual > :nth-child(1) { stroke: var(--error) !important; stroke-width: 3px !important; }

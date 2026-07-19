@@ -59,13 +59,18 @@ export function RefinePage() {
 
   return (
     <section className="refine">
-      <div className="refine-diagram">
+      <div className="refine-top">
         <BpmnCanvas xml={xml} />
-        <LintPanel report={lint} />
-        <button onClick={save} disabled={!sessionId}>Save version</button>
-        {saved && <span className="muted">{saved}</span>}
       </div>
-      <div className="refine-chat">
+      <div className="refine-bottom">
+        <div className="refine-lint">
+          <LintPanel report={lint} />
+          <div className="refine-footer">
+            <button onClick={save} disabled={!sessionId}>Save version</button>
+            {saved && <span className="muted">{saved}</span>}
+          </div>
+        </div>
+        <div className="refine-chat">
         <div className="chat-log">
           {chat.map((m, i) => <div key={i} className={`chat-msg ${m.who}`}><b>{m.who}:</b> {m.text}</div>)}
           <div ref={endRef} />
@@ -75,6 +80,7 @@ export function RefinePage() {
             placeholder="Answer the grill agent…"
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
           <button onClick={send} disabled={busy || !sessionId}>{busy ? 'Thinking…' : 'Send'}</button>
+        </div>
         </div>
       </div>
     </section>
