@@ -16,13 +16,37 @@ const SUPPORTED_MESSAGE =
   'supported: start/end events (incl. terminate), exclusive gateways, user/script/service tasks, ' +
   'duration timer intermediate catch events, error boundary events (FR-6)';
 
+/** Human-friendly names for the profile task types (actor in parentheses). */
+const TYPE_LABEL: Record<string, string> = {
+  'bpmn:ServiceTask': 'agent (service) task',
+  'bpmn:ScriptTask': 'code (script) task',
+  'bpmn:UserTask': 'human (user) task',
+};
+const typeLabel = (type: string) => TYPE_LABEL[type] ?? type.replace(/^bpmn:/, '');
+
+/** Quote a node by its human label, falling back to its id when it has no name. */
+const q = (name: string | undefined, id: string) => `"${name || id}"`;
+
+interface FindingOpts {
+  nodeId?: string;
+  nodeName?: string;
+  suggestion?: string;
+}
+
 function finding(
   rule: LintFinding['rule'],
   severity: LintFinding['severity'],
   message: string,
-  nodeId?: string,
+  opts: FindingOpts = {},
 ): LintFinding {
-  return { rule, severity, message, ...(nodeId ? { nodeId } : {}) };
+  return {
+    rule,
+    severity,
+    message,
+    ...(opts.nodeId ? { nodeId: opts.nodeId } : {}),
+    ...(opts.nodeName ? { nodeName: opts.nodeName } : {}),
+    ...(opts.suggestion ? { suggestion: opts.suggestion } : {}),
+  };
 }
 
 function report(findings: LintFinding[]): LintReport {
@@ -52,19 +76,24 @@ export async function lint(xml: string): Promise<LintReport> {
       for (const mf of root.messageFlows ?? []) {
         findings.push(finding(
           LINT_RULES.UNSUPPORTED_ELEMENT, 'error',
-          `message flows are not supported in v1; ${SUPPORTED_MESSAGE}`, mf.id,
+          `message flows are not supported in v1; ${SUPPORTED_MESSAGE}`,
+          { nodeId: mf.id, nodeName: mf.name },
         ));
       }
       continue;
     }
     if (root.$type !== 'bpmn:Process') continue;
     const elements: any[] = root.flowElements ?? [];
+    // id -> human label, so the graph rules (FF004/FF005) can name nodes they only hold by id.
+    const nameById = new Map<string, string>(
+      elements.filter((el) => el.id && el.name).map((el) => [el.id, el.name] as const),
+    );
     ruleUnsupportedElements(elements, findings);
     ruleMissingContracts(elements, findings);
     ruleGatewayConditions(elements, findings);
     const graph = buildGraph(elements);
-    ruleUndeclaredVariables(root, elements, graph, findings);
-    ruleOrphanNodes(elements, graph, findings);
+    ruleUndeclaredVariables(root, elements, graph, nameById, findings);
+    ruleOrphanNodes(elements, graph, nameById, findings);
     ruleInstructionLabels(elements, findings);
   }
   return report(findings);
@@ -72,8 +101,9 @@ export async function lint(xml: string): Promise<LintReport> {
 
 // Rule 1 (FF001): only profile elements may appear (FR-6).
 function ruleUnsupportedElements(elements: any[], findings: LintFinding[]): void {
-  const bad = (el: any, why: string) =>
-    findings.push(finding(LINT_RULES.UNSUPPORTED_ELEMENT, 'error', `${why}; ${SUPPORTED_MESSAGE}`, el.id));
+  const bad = (el: any, why: string, suggestion?: string) =>
+    findings.push(finding(LINT_RULES.UNSUPPORTED_ELEMENT, 'error', `${why}; ${SUPPORTED_MESSAGE}`,
+      { nodeId: el.id, nodeName: el.name, suggestion }));
 
   for (const el of elements) {
     switch (el.$type) {
@@ -84,36 +114,43 @@ function ruleUnsupportedElements(elements: any[], findings: LintFinding[]): void
       case 'bpmn:ServiceTask':
         break;
       case 'bpmn:StartEvent':
-        if (defs(el).length > 0) bad(el, `start event ${el.id} must be plain (no event definition)`);
+        if (defs(el).length > 0) bad(el, 'start event must be plain (no event definition)');
         break;
       case 'bpmn:EndEvent': {
         const other = defs(el).filter((d: any) => d.$type !== 'bpmn:TerminateEventDefinition');
-        if (other.length > 0) bad(el, `end event ${el.id} may only be plain or terminate`);
+        if (other.length > 0) bad(el, 'end event may only be plain or terminate');
         break;
       }
       case 'bpmn:IntermediateCatchEvent': {
         const [def, ...rest] = defs(el);
         if (!def || rest.length > 0 || def.$type !== 'bpmn:TimerEventDefinition' || !def.timeDuration) {
-          bad(el, `intermediate catch event ${el.id} must be a single timeDuration timer ` +
-            `(timeCycle/timeDate fire once and break recurrence — M1 finding)`);
+          bad(el, 'intermediate catch event must be a single timeDuration timer ' +
+            '(timeCycle/timeDate fire once and break recurrence — M1 finding)');
         }
         break;
       }
       case 'bpmn:BoundaryEvent': {
         const ok = defs(el).length === 1 && defs(el)[0].$type === 'bpmn:ErrorEventDefinition';
-        if (!ok) bad(el, `boundary event ${el.id} must carry exactly one error event definition`);
+        if (!ok) bad(el, 'boundary event must carry exactly one error event definition');
         break;
       }
+      case 'bpmn:Task':
+        // A generic, untyped task — the most common raw-export case. Grill can retype it to an actor.
+        bad(el, `unsupported element ${typeLabel(el.$type)}`,
+          `Assign an actor to ${q(el.name, el.id)}: is it an agent (service task), a human step (user task), ` +
+          'or deterministic code (script task)? Then give it its contract.');
+        break;
       default:
-        if (!PASSIVE_TYPES.has(el.$type)) bad(el, `unsupported element ${el.$type} (${el.id})`);
+        if (!PASSIVE_TYPES.has(el.$type)) bad(el, `unsupported element ${typeLabel(el.$type)}`);
     }
   }
 }
 
 // Rule 2 (FF002): every task carries its actor contract (FR-3).
 function ruleMissingContracts(elements: any[], findings: LintFinding[]): void {
-  const miss = (el: any, what: string) =>
-    findings.push(finding(LINT_RULES.MISSING_CONTRACT, 'error', `${el.$type} ${el.id} ${what}`, el.id));
+  const miss = (el: any, what: string, suggestion?: string) =>
+    findings.push(finding(LINT_RULES.MISSING_CONTRACT, 'error', `${typeLabel(el.$type)} ${what}`,
+      { nodeId: el.id, nodeName: el.name, suggestion }));
   const ext = (el: any, typeName: string) =>
     el.extensionElements?.values?.find((v: any) => v.$type === typeName);
   const jsonObject = (text: string | undefined) => {
@@ -128,22 +165,27 @@ function ruleMissingContracts(elements: any[], findings: LintFinding[]): void {
 
   for (const el of elements) {
     if (el.$type === 'bpmn:ServiceTask') {
+      const suggestion = `Give the agent task ${q(el.name, el.id)} a contract: a prompt describing what ` +
+        'Claude should do and an output JSON Schema.';
       const a = ext(el, 'flowfabric:AgentTask');
-      if (!a) miss(el, 'is missing its flowfabric:agentTask contract');
+      if (!a) miss(el, 'is missing its agent contract', suggestion);
       else {
-        if (!a.prompt?.text?.trim()) miss(el, 'has no agent prompt');
-        if (!jsonObject(a.outputSchema?.text)) miss(el, 'has no valid JSON outputSchema');
+        if (!a.prompt?.text?.trim()) miss(el, 'has no agent prompt', suggestion);
+        if (!jsonObject(a.outputSchema?.text)) miss(el, 'has no valid JSON outputSchema', suggestion);
       }
     } else if (el.$type === 'bpmn:ScriptTask') {
+      const suggestion = `Give the code task ${q(el.name, el.id)} a contract: the shell command to run and ` +
+        'an output JSON Schema.';
       const c = ext(el, 'flowfabric:CodeTask');
-      if (!c) miss(el, 'is missing its flowfabric:codeTask contract');
+      if (!c) miss(el, 'is missing its code contract', suggestion);
       else {
-        if (!c.command?.trim()) miss(el, 'has no command');
-        if (!jsonObject(c.outputSchema?.text)) miss(el, 'has no valid JSON outputSchema');
+        if (!c.command?.trim()) miss(el, 'has no command', suggestion);
+        if (!jsonObject(c.outputSchema?.text)) miss(el, 'has no valid JSON outputSchema', suggestion);
       }
     } else if (el.$type === 'bpmn:UserTask') {
+      const suggestion = `Add a form schema (the fields the human fills in) for the user task ${q(el.name, el.id)}.`;
       const u = ext(el, 'flowfabric:UserTask');
-      if (!u || !jsonObject(u.formSchema?.text)) miss(el, 'has no valid JSON formSchema');
+      if (!u || !jsonObject(u.formSchema?.text)) miss(el, 'has no valid JSON formSchema', suggestion);
     }
   }
 }
@@ -160,12 +202,16 @@ function ruleGatewayConditions(elements: any[], findings: LintFinding[]): void {
       const ce = flow.conditionExpression;
       const evaluable = !!ce?.body?.trim() && ce.language?.toLowerCase() === 'javascript';
       if (!evaluable) {
-        const label = flow.name ? ` (label: "${flow.name}")` : '';
         findings.push(finding(
           LINT_RULES.UNEVALUABLE_CONDITION, 'error',
-          `flow ${flow.id} out of gateway ${gw.id}${label} needs a javascript conditionExpression ` +
-            `over process variables, or must be the gateway's default flow`,
-          flow.id,
+          `path ${q(flow.name, flow.id)} out of gateway ${q(gw.name, gw.id)} needs a javascript ` +
+            "conditionExpression over process variables, or must be the gateway's default flow",
+          {
+            nodeId: flow.id,
+            nodeName: flow.name,
+            suggestion: `Set a condition for the ${q(flow.name, flow.id)} path out of gateway ` +
+              `${q(gw.name, gw.id)} — a JS boolean over process variables — or make it the gateway's default flow.`,
+          },
         ));
       }
     }
@@ -215,7 +261,13 @@ const CONDITION_VAR = /environment\.variables\.([A-Za-z_$][A-Za-z0-9_$]*)/g;
 
 // Rule 4 (FF004): every consumed variable is produced strictly upstream or declared
 // as an instance input (FR-3). "Upstream" = the consumer is reachable from the producer.
-function ruleUndeclaredVariables(proc: any, elements: any[], graph: Graph, findings: LintFinding[]): void {
+function ruleUndeclaredVariables(
+  proc: any,
+  elements: any[],
+  graph: Graph,
+  nameById: Map<string, string>,
+  findings: LintFinding[],
+): void {
   const ext = (el: any, typeName: string) =>
     el.extensionElements?.values?.find((v: any) => v.$type === typeName);
   const schemaProps = (text: string | undefined): string[] => {
@@ -267,25 +319,39 @@ function ruleUndeclaredVariables(proc: any, elements: any[], graph: Graph, findi
     const key = `${nodeId}:${variable}`;
     if (!ok && !flagged.has(key)) {
       flagged.add(key);
+      const name = nameById.get(nodeId);
       findings.push(finding(
         LINT_RULES.UNDECLARED_VARIABLE, 'error',
-        `variable "${variable}" used at ${nodeId} is not produced upstream and not declared as an instance input`,
-        nodeId,
+        `variable "${variable}" used at ${q(name, nodeId)} is not produced upstream and not declared ` +
+          'as an instance input',
+        {
+          nodeId,
+          nodeName: name,
+          suggestion: `Declare "${variable}" as an instance input, or add an upstream task that produces it ` +
+            `before ${q(name, nodeId)}.`,
+        },
       ));
     }
   }
 }
 
 // Rule 5 (FF005): every flow node is reachable from a start event.
-function ruleOrphanNodes(elements: any[], graph: Graph, findings: LintFinding[]): void {
+function ruleOrphanNodes(
+  elements: any[],
+  graph: Graph,
+  nameById: Map<string, string>,
+  findings: LintFinding[],
+): void {
   const startIds = elements.filter((el) => el.$type === 'bpmn:StartEvent').map((el) => el.id);
   const reachable = reachableFrom(graph, startIds);
   for (const id of graph.nodeIds) {
     if (!reachable.has(id)) {
+      const name = nameById.get(id);
       findings.push(finding(
         LINT_RULES.ORPHAN_NODE, 'error',
-        `node ${id} is unreachable from any start event; no removeNode patch op exists — delete it in the source editor and re-upload`,
-        id,
+        `node ${q(name, id)} is unreachable from any start event; no removeNode patch op exists — ` +
+          'delete it in the source editor and re-upload',
+        { nodeId: id, nodeName: name },
       ));
     }
   }
@@ -300,8 +366,14 @@ function ruleInstructionLabels(elements: any[], findings: LintFinding[]): void {
     if (typeof el.name === 'string' && INSTRUCTION_LABEL.test(el.name)) {
       findings.push(finding(
         LINT_RULES.INSTRUCTION_LABEL, 'warning',
-        `label "${el.name}" on ${el.id} carries execution instructions; model it as a terminate end event or loop condition instead`,
-        el.id,
+        `label "${el.name}" carries execution instructions; model it as a terminate end event ` +
+          'or loop condition instead',
+        {
+          nodeId: el.id,
+          nodeName: el.name,
+          suggestion: `Replace the instruction label "${el.name}" with a terminate end event or ` +
+            'a loop-back condition.',
+        },
       ));
     }
   }

@@ -42,11 +42,10 @@ export function RefinePage() {
 
   useEffect(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), [chat]);
 
-  async function send() {
-    if (!sessionId || !draft.trim()) return;
-    setChat((c) => [...c, { who: 'you', text: draft }]);
+  async function send(text: string = draft) {
+    if (!sessionId || !text.trim()) return;
+    setChat((c) => [...c, { who: 'you', text }]);
     setBusy(true);
-    const text = draft;
     setDraft('');
     await api.sendGrill(sessionId, text);
   }
@@ -64,7 +63,7 @@ export function RefinePage() {
       </div>
       <div className="refine-bottom">
         <div className="refine-lint">
-          <LintPanel report={lint} />
+          <LintPanel report={lint} busy={busy} onSuggest={send} />
           <div className="refine-footer">
             <button onClick={save} disabled={!sessionId}>Save version</button>
             {saved && <span className="muted">{saved}</span>}
@@ -79,7 +78,7 @@ export function RefinePage() {
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)}
             placeholder="Answer the grill agent…"
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
-          <button onClick={send} disabled={busy || !sessionId}>{busy ? 'Thinking…' : 'Send'}</button>
+          <button onClick={() => send()} disabled={busy || !sessionId}>{busy ? 'Thinking…' : 'Send'}</button>
         </div>
         </div>
       </div>

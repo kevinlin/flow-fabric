@@ -533,7 +533,20 @@ tbody tr { transition: background 110ms var(--ease-out); }
 }
 .lint-panel .sev-error code { color: var(--error); }
 .lint-panel .sev-warning code { color: var(--amber); }
-.lint-panel .finding em { color: var(--slate); font-style: normal; }
+.lint-panel .finding em { color: var(--slate); font-style: normal; font-weight: 600; }
+.lint-panel .fix-btn {
+  margin-left: 8px;
+  padding: 1px 8px;
+  font-size: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-xs);
+  background: var(--soft-stone);
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lint-panel .fix-btn:hover:not(:disabled) { border-color: var(--slate); }
+.lint-panel .fix-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ---- BPMN canvas + live token markers ------------------------------------ */
 

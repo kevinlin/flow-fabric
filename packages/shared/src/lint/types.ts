@@ -14,7 +14,11 @@ export interface LintFinding {
   severity: 'error' | 'warning';
   /** Flow node or sequence flow id the finding points at; absent for file-level findings. */
   nodeId?: string;
+  /** Human label of the node (moddle `name`), when it has one. The UI shows this instead of the id. */
+  nodeName?: string;
   message: string;
+  /** Ready-to-send grill instruction that fixes this finding. Present only for grill-actionable rules. */
+  suggestion?: string;
 }
 
 export interface LintReport {

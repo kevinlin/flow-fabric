@@ -251,6 +251,56 @@ describe('lint rule 6 — instruction-bearing labels (FF006)', () => {
   });
 });
 
+describe('readable messages + auto-fix suggestions', () => {
+  it('names nodes by their label, not the raw id, and keeps no id in the message', async () => {
+    const report = await lint(messy);
+    const gen = byRule(report, LINT_RULES.UNSUPPORTED_ELEMENT).find((f) => f.nodeId === 'checkTracker')!;
+    expect(gen.nodeName).toBe('Check the tracker');
+    expect(gen.message).not.toContain('checkTracker');
+    expect(gen.message).not.toContain('sid-');
+    expect(report.findings.every((f) => !f.message.includes('sid-'))).toBe(true);
+  });
+
+  it('attaches a one-click suggestion to grill-fixable findings', async () => {
+    const report = await lint(messy);
+    const gen = byRule(report, LINT_RULES.UNSUPPORTED_ELEMENT).find((f) => f.nodeId === 'checkTracker')!;
+    expect(gen.suggestion).toContain('Assign an actor');
+    expect(gen.suggestion).toContain('Check the tracker');
+
+    const cond = byRule(report, LINT_RULES.UNEVALUABLE_CONDITION).find((f) => f.nodeId === 'flowYes')!;
+    expect(cond.nodeName).toBe('Yes');
+    expect(cond.suggestion).toContain('At risk?'); // the gateway label, resolved from its name
+    expect(cond.suggestion).toContain('condition');
+
+    const label = byRule(report, LINT_RULES.INSTRUCTION_LABEL).find((f) => f.nodeId === 'endStop')!;
+    expect(label.suggestion).toContain('terminate end event');
+  });
+
+  it('omits the suggestion for editor-only findings (orphans, structural FF001)', async () => {
+    const orphaned = await lint(wrap(`
+      <startEvent id="start" />
+      <sequenceFlow id="f1" sourceRef="start" targetRef="end" />
+      <endEvent id="end" />
+      <userTask id="orphan" name="Old step">
+        <extensionElements>
+          <flowfabric:userTask><flowfabric:formSchema>{"type":"object"}</flowfabric:formSchema></flowfabric:userTask>
+        </extensionElements>
+      </userTask>`));
+    const orphan = byRule(orphaned, LINT_RULES.ORPHAN_NODE).find((f) => f.nodeId === 'orphan')!;
+    expect(orphan.nodeName).toBe('Old step');
+    expect(orphan.suggestion).toBeUndefined();
+
+    const parallel = await lint(wrap(`
+      <startEvent id="start" />
+      <sequenceFlow id="f1" sourceRef="start" targetRef="pg" />
+      <parallelGateway id="pg" name="Fork" />
+      <sequenceFlow id="f2" sourceRef="pg" targetRef="end" />
+      <endEvent id="end" />`));
+    const pg = byRule(parallel, LINT_RULES.UNSUPPORTED_ELEMENT).find((f) => f.nodeId === 'pg')!;
+    expect(pg.suggestion).toBeUndefined();
+  });
+});
+
 describe('lint verdicts on whole files (impl M3.2 verify)', () => {
   it('hand-refined daily-loop fixture is deployable', async () => {
     const report = await lint(refined);

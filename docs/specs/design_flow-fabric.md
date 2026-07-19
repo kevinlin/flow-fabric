@@ -105,6 +105,8 @@ Namespace: `http://flowfabric.dev/schema/1.0`. Contracts live in `bpmn:extension
 
 Lint report is stored with the version; deployable = zero errors.
 
+**Finding shape.** Each finding carries `rule`, `severity`, the target `nodeId`, its human `nodeName` (the BPMN label), a `message`, and — for the grill-fixable rules (FF002–FF004, FF006, and the generic-task case of FF001) — a `suggestion`: a ready-to-send grill instruction. Messages name nodes by their label, not the raw element id; Signavio exports use opaque sids, so the id stays in `nodeId` for overlay/lookup while the panel and messages read by name. FF005 orphans and structural FF001 (parallel gateways, message flows, malformed events) carry no `suggestion` — they need a source-editor fix and re-upload, which no patch op performs.
+
 ## 5. Data model (SQLite)
 
 | Table | Key columns |
@@ -180,7 +182,7 @@ SSE: `GET /api/events?instanceId=...`. Event types: `instance.started/completed/
 
 ## 9. Web UI
 
-Pages: **Definitions** (list, upload, versions, lint report), **Refine** (bpmn-js render + grill chat + live diff/lint panel), **Instances** (list + live diagram view with token overlay and per-node status, FR-20; timeline tab with inputs/outputs/durations/transcript links/cost, FR-21), **Inbox** (user task forms + incident resolution, FR-22), **Dashboards** (success rate, duration distribution, cost per run/task, incident frequency as SQL aggregates, FR-23), **System** (health, scheduler state, platform logs).
+Pages: **Definitions** (list, upload, versions, lint report), **Refine** (bpmn-js render + grill chat + live diff/lint panel; each grill-fixable finding carries an "Ask grill to fix" button that sends its `suggestion` straight to the grill agent), **Instances** (list + live diagram view with token overlay and per-node status, FR-20; timeline tab with inputs/outputs/durations/transcript links/cost, FR-21), **Inbox** (user task forms + incident resolution, FR-22), **Dashboards** (success rate, duration distribution, cost per run/task, incident frequency as SQL aggregates, FR-23), **System** (health, scheduler state, platform logs).
 
 Forms are rendered from JSON Schema (`@rjsf` or equivalent); complex inputs (files, tables) are out of scope for v1 form generation; escape hatch is a free-form JSON field (PRD §9).
 
