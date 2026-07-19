@@ -1,0 +1,13 @@
+{
+  "name": "Flow Fabric",
+  "short_name": "Flow Fabric",
+  "description": "Local control plane for AI Developer Workflows.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#003c33",
+  "icons": [
+    { "src": "/flow-fabric-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/flow-fabric-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
