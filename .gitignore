@@ -40,3 +40,6 @@ packages/web/.impeccable/live/
 
 # Superpowers
 .superpowers/
+
+# Polish shots
+.polish-shots/
