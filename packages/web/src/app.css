@@ -339,9 +339,8 @@ tbody tr { transition: background 110ms var(--ease-out); }
 }
 
 .inbox-card.incident {
-  border-color: var(--coral-soft);
+  border-color: var(--coral);
   background: var(--pale-red);
-  border-left: 3px solid var(--coral);
 }
 .inbox-card .reason {
   font-family: var(--font-mono);

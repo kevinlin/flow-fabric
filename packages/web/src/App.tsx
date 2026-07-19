@@ -8,10 +8,10 @@ import { DashboardsPage } from './pages/DashboardsPage';
 import { SystemPage } from './pages/SystemPage';
 
 const NAV = [
+  ['/dashboards', 'Dashboards'],
   ['/definitions', 'Definitions'],
   ['/instances', 'Instances'],
   ['/inbox', 'Inbox'],
-  ['/dashboards', 'Dashboards'],
   ['/system', 'System'],
 ] as const;
 

@@ -115,3 +115,12 @@ Load-bearing and easy to get wrong. Full rationale + probe evidence live in the 
 - Plans (all done, compacted post-ship): [M1 engine spike](docs/specs/plan_m1-engine-spike.md) (+ spike findings, GO verdict), [M2 runners + failure ladder](docs/specs/plan_m2-runners-failure-ladder.md) (+ dispatch spike findings), [M3 intake](docs/specs/plan_m3-intake.md), [M4 web UI](docs/specs/plan_m4-web-ui.md) (+ build findings for M5)
 
 `Input/` and `Output/` are git-ignored. The two real BPMN files (`Input/bpmn/rfp-daily-routine.bpmn`, the flagship Signavio export, and `interview-process.bpmn`, the intake generality case) live locally but aren't tracked.
+
+## Design context
+
+Frontend design work (the `packages/web` SPA) is governed by two root docs — read them before changing UI:
+
+- [PRODUCT.md](PRODUCT.md) — register `product`, platform `web`. Strategic: users (operator-first, demo-ready), purpose, positioning, brand personality, anti-references, and the five design principles.
+- [DESIGN.md](DESIGN.md) — the visual system (colors, type, components). Currently the imported Cohere analysis the app is derived from; [app.css](packages/web/src/app.css) is the live source of truth and has diverged (status colors, `--amber`, `--pale-*` surfaces). Regenerate with `/impeccable document` when accuracy matters.
+
+Design principles (from PRODUCT.md): show engine truth never improvise · never silently stall · vigilant not noisy · density earns its place · demo-grade by default. Target feel: command-center vigilance under editorial restraint. A11y bar: WCAG 2.1 AA.
