@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, afterEach } from 'vitest';
-import { DefinitionStore } from '../src/definitions/store.js';
+import { DefinitionStore, DefinitionNotFoundError, DefinitionInUseError } from '../src/definitions/store.js';
 import { InstanceStore } from '../src/engine-host/store.js';
 import { EngineHost } from '../src/engine-host/engine-host.js';
 import { Inbox } from '../src/inbox/inbox.js';
@@ -53,6 +53,40 @@ describe('DefinitionStore', () => {
     const v = defs.getVersion(id, 1)!;
     expect(v.deployable).toBe(true);
     expect(v.xml).toBe(contracts);
+  });
+
+  it('deletes a definition and all its versions', () => {
+    const defs = defStore();
+    const { id } = defs.upload('contracts', contracts);
+    defs.saveVersion(id, contracts);
+    expect(defs.listVersions(id)).toHaveLength(2);
+    defs.delete(id);
+    expect(defs.getDefinition(id)).toBeUndefined();
+    expect(defs.listVersions(id)).toHaveLength(0);
+    expect(defs.listDefinitions()).toHaveLength(0);
+  });
+
+  it('throws DefinitionNotFoundError when deleting a missing definition', () => {
+    const defs = defStore();
+    expect(() => defs.delete('nonexistent')).toThrow(DefinitionNotFoundError);
+  });
+
+  it('throws DefinitionInUseError when instances reference the definition', () => {
+    const dir = tmp();
+    const dbPath = path.join(dir, 'ff.db');
+    const defs = new DefinitionStore(dbPath);
+    const instanceStore = new InstanceStore(dbPath);
+    stores.push(defs, instanceStore);
+    const { id } = defs.upload('contracts', contracts);
+    defs.setLintReport(id, 1, { findings: [], errorCount: 0, deployable: true });
+    const host = new EngineHost(instanceStore, { onUserTaskWait: () => {} });
+    const completion = host.start({
+      id: 'inst-1', name: 'test', source: contracts,
+      workspace: dir, dryRun: true, definitionId: id, versionNo: 1,
+    });
+    completion.catch(() => {});
+    expect(() => defs.delete(id)).toThrow(DefinitionInUseError);
+    expect(defs.getDefinition(id)).toBeDefined();
   });
 
   it.skipIf(!existsSync(RFP_PATH))('uploads both real Input files (impl M3.1 verify)', () => {
@@ -114,5 +148,39 @@ describe('definitions API', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().deployable).toBe(false);
     expect(definitions.getVersion(id, 1)?.lintReport?.errorCount).toBeGreaterThan(0);
+  });
+
+  it('DELETE /api/definitions/:id removes an unused definition (204)', async () => {
+    const { app, definitions } = build();
+    const { id } = (await app.inject({
+      method: 'POST', url: '/api/definitions', payload: { name: 'contracts', xml: contracts },
+    })).json();
+    const res = await app.inject({ method: 'DELETE', url: `/api/definitions/${id}` });
+    expect(res.statusCode).toBe(204);
+    expect(definitions.getDefinition(id)).toBeUndefined();
+    const list = await app.inject({ method: 'GET', url: '/api/definitions' });
+    expect(list.json().definitions).toHaveLength(0);
+  });
+
+  it('DELETE /api/definitions/:id returns 404 for unknown id', async () => {
+    const { app } = build();
+    const res = await app.inject({ method: 'DELETE', url: '/api/definitions/nonexistent' });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('DELETE /api/definitions/:id returns 409 when instances exist', async () => {
+    const { app, definitions } = build();
+    const { id } = (await app.inject({
+      method: 'POST', url: '/api/definitions', payload: { name: 'contracts', xml: contracts },
+    })).json();
+    definitions.setLintReport(id, 1, { findings: [], errorCount: 0, deployable: true });
+    const started = await app.inject({
+      method: 'POST', url: '/api/instances',
+      payload: { definitionId: id, version: 1, workspacePath: tmp(), dryRun: true },
+    });
+    expect(started.statusCode).toBe(201);
+    const res = await app.inject({ method: 'DELETE', url: `/api/definitions/${id}` });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toContain('linked instance');
   });
 });

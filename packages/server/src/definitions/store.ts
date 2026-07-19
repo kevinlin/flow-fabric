@@ -146,7 +146,39 @@ export class DefinitionStore {
     return row ? coerce(row) : undefined;
   }
 
+  /**
+   * Deletes a definition and all its versions.
+   * Refuses if any instance references this definition (409-style guard).
+   */
+  delete(id: string): void {
+    if (!this.getDefinition(id)) throw new DefinitionNotFoundError(id);
+    const hasTable = this.db
+      .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='instances'`)
+      .get();
+    if (hasTable) {
+      const { count } = this.db
+        .prepare(`SELECT COUNT(*) AS count FROM instances WHERE definition_id = ?`)
+        .get(id) as { count: number };
+      if (count > 0) throw new DefinitionInUseError(id, count);
+    }
+    this.db.transaction(() => {
+      this.db.prepare(`DELETE FROM definition_versions WHERE definition_id = ?`).run(id);
+      this.db.prepare(`DELETE FROM definitions WHERE id = ?`).run(id);
+    })();
+  }
+
   close(): void {
     this.db.close();
+  }
+}
+
+export class DefinitionNotFoundError extends Error {
+  constructor(id: string) { super(`no definition ${id}`); this.name = 'DefinitionNotFoundError'; }
+}
+
+export class DefinitionInUseError extends Error {
+  constructor(id: string, public readonly instanceCount: number) {
+    super(`definition ${id} has ${instanceCount} linked instance(s); delete them first`);
+    this.name = 'DefinitionInUseError';
   }
 }

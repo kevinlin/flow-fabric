@@ -172,7 +172,7 @@ No silent stalls: every non-terminal halt is either an engine wait state (timer,
 
 REST (all under `/api`):
 
-- `POST /definitions` (upload), `GET /definitions`, `GET /definitions/:id/versions/:v`, `POST /definitions/:id/versions/:v/lint`
+- `POST /definitions` (upload), `GET /definitions`, `GET /definitions/:id/versions/:v`, `POST /definitions/:id/versions/:v/lint`, `DELETE /definitions/:id` (204; 409 if instances reference it)
 - `POST /grill/sessions` `{definitionId}`, `POST /grill/sessions/:id/messages`, `POST /grill/sessions/:id/save-version`
 - `POST /instances` `{versionId, workspacePath, dryRun, inputs, stubOverrides?}`, `GET /instances`, `GET /instances/:id` (incl. timeline), `POST /instances/:id/abort`
 - `GET /inbox` (user tasks + incidents), `POST /user-tasks/:id/submit`, `POST /incidents/:id/resolve` `{action, output?}`
@@ -182,7 +182,7 @@ SSE: `GET /api/events?instanceId=...`. Event types: `instance.started/completed/
 
 ## 9. Web UI
 
-Pages: **Definitions** (list, upload, versions, lint report), **Refine** (bpmn-js render + grill chat + live diff/lint panel; each grill-fixable finding carries an "Ask grill to fix" button that sends its `suggestion` straight to the grill agent), **Instances** (list + live diagram view with token overlay and per-node status, FR-20; timeline tab with inputs/outputs/durations/transcript links/cost, FR-21), **Inbox** (user task forms + incident resolution, FR-22), **Dashboards** (success rate, duration distribution, cost per run/task, incident frequency as SQL aggregates, FR-23), **System** (health, scheduler state, platform logs).
+Pages: **Definitions** (list, upload, delete unused, versions, lint report), **Refine** (bpmn-js render + grill chat + live diff/lint panel; each grill-fixable finding carries an "Ask grill to fix" button that sends its `suggestion` straight to the grill agent), **Instances** (list + live diagram view with token overlay and per-node status, FR-20; timeline tab with inputs/outputs/durations/transcript links/cost, FR-21), **Inbox** (user task forms + incident resolution, FR-22), **Dashboards** (success rate, duration distribution, cost per run/task, incident frequency as SQL aggregates, FR-23), **System** (health, scheduler state, platform logs).
 
 Forms are rendered from JSON Schema (`@rjsf` or equivalent); complex inputs (files, tables) are out of scope for v1 form generation; escape hatch is a free-form JSON field (PRD §9).
 

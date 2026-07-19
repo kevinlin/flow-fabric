@@ -30,12 +30,18 @@ export function DefinitionsPage() {
       </label>
       {error && <p className="lint-bad">{error}</p>}
       {defs.length === 0 && <p className="muted">No definitions yet. Upload a BPMN file to begin.</p>}
-      {defs.map((d) => <DefinitionRow key={d.id} def={d} />)}
+      {defs.map((d) => <DefinitionRow key={d.id} def={d} onDeleted={refresh} onError={setError} />)}
     </section>
   );
 }
 
-function DefinitionRow({ def }: { def: DefinitionDto }) {
+interface DefinitionRowProps {
+  def: DefinitionDto;
+  onDeleted: () => void;
+  onError: (msg: string) => void;
+}
+
+function DefinitionRow({ def, onDeleted, onError }: DefinitionRowProps) {
   const [versions, setVersions] = useState<VersionSummaryDto[]>([]);
   const refresh = () => api.listVersions(def.id).then(setVersions);
   useEffect(() => { refresh(); }, [def.id]);
@@ -53,11 +59,24 @@ function DefinitionRow({ def }: { def: DefinitionDto }) {
     window.location.hash = `#/instances/${id}`;
   }
 
+  async function remove() {
+    if (!window.confirm(`Delete "${def.name}" and all its versions?`)) return;
+    try {
+      await api.deleteDefinition(def.id);
+      onDeleted();
+    } catch (err) {
+      onError(String(err));
+    }
+  }
+
   return (
     <div className="def-card">
       <div className="def-head">
         <strong>{def.name}</strong>
-        <Link to={`/definitions/${def.id}/refine`}>Refine</Link>
+        <span className="def-actions">
+          <Link to={`/definitions/${def.id}/refine`}>Refine</Link>
+          <button className="btn-danger" onClick={remove}>Delete</button>
+        </span>
       </div>
       <table>
         <thead><tr><th>Version</th><th>Lint</th><th>Actions</th></tr></thead>

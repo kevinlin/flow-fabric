@@ -248,6 +248,20 @@ button:disabled { opacity: 0.45; cursor: default; }
   .schema-form > button:last-child:hover:not(:disabled) { background: #2c2c34; border-color: #2c2c34; }
 }
 
+/* Danger / destructive action */
+.btn-danger {
+  color: var(--error);
+  border-color: var(--error);
+  background: var(--canvas);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger:hover:not(:disabled) {
+    background: var(--error);
+    color: var(--on-dark);
+    border-color: var(--error);
+  }
+}
+
 /* Upload label styled as an outline pill */
 .upload {
   display: inline-flex;
@@ -336,6 +350,11 @@ tbody tr { transition: background 110ms var(--ease-out); }
   font-size: 20px;
   font-weight: 500;
   letter-spacing: -0.01em;
+}
+.def-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .inbox-card.incident {

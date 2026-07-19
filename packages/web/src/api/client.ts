@@ -47,6 +47,7 @@ export const api = {
 
   listDefinitions: () => req<{ definitions: DefinitionDto[] }>('/api/definitions').then((r) => r.definitions),
   uploadDefinition: (name: string, xml: string) => post<{ id: string; versionNo: number }>('/api/definitions', { name, xml }),
+  deleteDefinition: (id: string) => req<void>(`/api/definitions/${id}`, { method: 'DELETE' }),
   listVersions: (id: string) => req<{ versions: VersionSummaryDto[] }>(`/api/definitions/${id}/versions`).then((r) => r.versions),
   getVersion: (id: string, v: number | 'latest') =>
     req<{ definitionId: string; versionNo: number; xml: string; lintReport: LintReport | null; deployable: boolean }>(

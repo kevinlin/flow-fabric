@@ -18,7 +18,7 @@ export { buildApi } from './api/server.js';
 export type { ApiDeps } from './api/server.js';
 export { readProfile } from './profile/read.js';
 export type { ProcessProfile } from './profile/read.js';
-export { DefinitionStore } from './definitions/store.js';
+export { DefinitionStore, DefinitionNotFoundError, DefinitionInUseError } from './definitions/store.js';
 export type { DefinitionRow, DefinitionVersionRow } from './definitions/store.js';
 export { lint } from './linter/lint.js';
 export { applyPatchOps, PatchOpError } from './patch-ops/apply.js';

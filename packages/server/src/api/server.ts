@@ -5,7 +5,7 @@ import fastifyStatic from '@fastify/static';
 import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
-import type { DefinitionStore } from '../definitions/store.js';
+import { DefinitionNotFoundError, DefinitionInUseError, type DefinitionStore } from '../definitions/store.js';
 import type { GrillHost } from '../grill/session.js';
 import type { LogRing } from '../logs/ring.js';
 import { lint } from '../linter/lint.js';
@@ -216,6 +216,18 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing, webR
       const report = await lint(version.xml);
       definitions.setLintReport(version.definitionId, version.versionNo, report);
       return report;
+    });
+
+    app.delete('/api/definitions/:id', async (req, reply) => {
+      const { id } = req.params as { id: string };
+      try {
+        definitions.delete(id);
+        return reply.code(204).send();
+      } catch (err) {
+        if (err instanceof DefinitionNotFoundError) return reply.code(404).send({ error: String(err) });
+        if (err instanceof DefinitionInUseError) return reply.code(409).send({ error: String(err) });
+        throw err;
+      }
     });
   }
 
