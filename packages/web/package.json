@@ -14,7 +14,9 @@
     "bpmn-js": "^18",
     "react": "^19",
     "react-dom": "^19",
-    "react-router-dom": "^7"
+    "react-markdown": "^10",
+    "react-router-dom": "^7",
+    "remark-gfm": "^4"
   },
   "devDependencies": {
     "@testing-library/react": "^16",

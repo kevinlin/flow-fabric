@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { useEventStream } from '../api/sse';
 import { BpmnCanvas } from '../components/BpmnCanvas';
 import { LintPanel } from '../components/LintPanel';
+import { Markdown } from '../components/Markdown';
 import { messageToText } from '../lib/chat';
 
 export function RefinePage() {
@@ -71,7 +72,11 @@ export function RefinePage() {
         </div>
         <div className="refine-chat">
         <div className="chat-log">
-          {chat.map((m, i) => <div key={i} className={`chat-msg ${m.who}`}><b>{m.who}:</b> {m.text}</div>)}
+          {chat.map((m, i) => (
+            <div key={i} className={`chat-msg ${m.who}`}>
+              <b>{m.who}:</b> {m.who === 'agent' ? <Markdown text={m.text} /> : m.text}
+            </div>
+          ))}
           <div ref={endRef} />
         </div>
         <div className="chat-input">

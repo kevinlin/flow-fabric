@@ -487,6 +487,41 @@ tbody tr { transition: background 110ms var(--ease-out); }
 .chat-msg.agent { align-self: flex-start; background: var(--soft-stone); color: var(--ink); border-bottom-left-radius: var(--r-xs); }
 .chat-msg.you { align-self: flex-end; background: var(--primary); color: var(--on-dark); border-bottom-right-radius: var(--r-xs); }
 .chat-msg b { display: none; } /* speaker prefix redundant once bubbles are sided */
+
+/* Markdown rendered inside an agent bubble. Collapse block margins so the bubble
+   hugs its content; give code a surface that reads against the stone bubble. */
+.chat-msg .markdown > :first-child { margin-top: 0; }
+.chat-msg .markdown > :last-child { margin-bottom: 0; }
+.chat-msg .markdown p { margin: 0 0 8px; }
+.chat-msg .markdown h1, .chat-msg .markdown h2, .chat-msg .markdown h3,
+.chat-msg .markdown h4 { margin: 12px 0 6px; font-size: 1em; font-weight: 700; }
+.chat-msg .markdown ul, .chat-msg .markdown ol { margin: 0 0 8px; padding-left: 1.3em; }
+.chat-msg .markdown li { margin: 2px 0; }
+.chat-msg .markdown a { color: var(--primary); text-decoration: underline; }
+.chat-msg .markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-xs);
+  padding: 1px 4px;
+}
+.chat-msg .markdown pre {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-xs);
+  padding: 10px 12px;
+  margin: 0 0 8px;
+  overflow-x: auto;
+}
+.chat-msg .markdown pre code { border: 0; padding: 0; background: none; }
+.chat-msg .markdown table { border-collapse: collapse; margin: 0 0 8px; font-size: 0.92em; }
+.chat-msg .markdown th, .chat-msg .markdown td { border: 1px solid var(--hairline); padding: 4px 8px; }
+.chat-msg .markdown blockquote {
+  margin: 0 0 8px; padding-left: 10px;
+  border-left: 3px solid var(--hairline); color: var(--muted, var(--ink));
+}
+
 .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--hairline); }
 .chat-input textarea { flex: 1; height: 60px; }
 
