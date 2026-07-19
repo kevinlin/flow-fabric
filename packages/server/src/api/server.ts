@@ -9,6 +9,17 @@ import type { GrillHost } from '../grill/session.js';
 import type { LogRing } from '../logs/ring.js';
 import { lint } from '../linter/lint.js';
 import { OutputValidationError } from '../runners/validate.js';
+import type {
+  DefinitionMetricsDto,
+  SchedulerDto,
+} from '@flowfabric/shared';
+import type { DefinitionMetrics } from '../engine-host/store.js';
+
+// Compile-time guards: server return shapes must remain assignable to the DTOs.
+type _MetricsPin = DefinitionMetrics extends DefinitionMetricsDto ? true : never;
+type _SchedulerPin = { timers: ReturnType<EngineHost['scheduledTimers']> } extends SchedulerDto ? true : never;
+const _dtoPins: [_MetricsPin, _SchedulerPin] = [true, true];
+void _dtoPins;
 
 export interface ApiDeps {
   store: InstanceStore;
