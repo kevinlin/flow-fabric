@@ -17,3 +17,9 @@ button { cursor: pointer; }
 .tabs { margin: 12px 0; display: flex; gap: 6px; }
 .tabs button.active { background: #111; color: #fff; }
 .cell-json { font-size: 12px; color: #555; }
+.tiles { display: flex; gap: 12px; margin: 12px 0; }
+.tile { background: #f5f5f5; border-radius: 8px; padding: 16px 20px; min-width: 120px; }
+.tile-value { font-size: 28px; font-weight: 700; }
+.tile-label { font-size: 12px; color: #666; }
+.bars { display: flex; flex-direction: column; gap: 4px; }
+.bar { background: #1565c0; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 3px; min-width: 40px; white-space: nowrap; }
