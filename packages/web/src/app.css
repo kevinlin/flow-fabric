@@ -27,3 +27,25 @@ button { cursor: pointer; }
 .log-level { display: inline-block; width: 44px; color: #888; }
 .log-warn .log-level { color: #d98300; }
 .log-error .log-level, .log-fatal .log-level { color: #ff6b6b; }
+.muted { color: #888; }
+.lint-ok { color: #2e7d32; font-weight: 600; }
+.lint-bad { color: #c62828; font-weight: 600; }
+.def-card, .inbox-card { border: 1px solid #e5e5e5; border-radius: 10px; padding: 16px; margin: 12px 0; }
+.def-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.inbox-card.incident { border-color: #f0b7b7; background: #fff7f7; }
+.inbox-card .reason { font-family: ui-monospace, monospace; font-size: 12px; color: #a33; }
+.inbox-card .actions { display: flex; gap: 8px; }
+.refine { display: grid; grid-template-columns: 1fr 380px; gap: 16px; height: calc(100vh - 48px); }
+.refine-chat { display: flex; flex-direction: column; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden; }
+.chat-log { flex: 1; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.chat-msg.you { text-align: right; color: #1565c0; }
+.chat-input { display: flex; gap: 6px; padding: 8px; border-top: 1px solid #eee; }
+.chat-input textarea { flex: 1; resize: none; height: 56px; }
+.schema-form .field { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+.schema-form .field label { width: 120px; }
+.status-running, .status-incident { font-weight: 600; }
+.status-completed, .status-terminated { color: #2e7d32; }
+.status-incident, .status-error, .status-aborted { color: #c62828; }
+.upload { display: inline-block; margin: 8px 0; }
+button { border: 1px solid #ccc; background: #fff; border-radius: 6px; padding: 4px 10px; }
+button:disabled { opacity: 0.5; cursor: default; }

@@ -3019,13 +3019,22 @@ git commit -m "feat(web): styling pass; docs: M4 built state; M4 exit gate"
 
 ## M4 Exit Checklist (impl spec verification gates)
 
-- [ ] M4.1 — every page loads against the live daemon; SPA served at `/` (Task 8, 9, 16 step 3).
-- [ ] M4.2 — grill session usable end-to-end from the browser: chat, live lint, save version (Task 11, 16 step 3).
-- [ ] M4.3 — watch a dry run live; token overlay moves; every executed step visible with inputs/outputs/durations/transcript/cost (Task 12; success criterion 3).
-- [ ] M4.4 — submit a real user task and resolve a forced incident from the browser (Task 13).
-- [ ] M4.5 — dashboard aggregates match seeded/real run data (Task 2 server, Task 14 render).
-- [ ] M4.6 — System page shows correct next-fire time for an armed timer; logs + health visible (Task 3 server, Task 15 render).
-- [ ] `pnpm build && pnpm test` green across the workspace; M1–M3 suites untouched and passing.
+- [x] M4.1 — SPA served at `/` (200, "Flow Fabric"), history-route fallback, API-priority 404, all read endpoints return correct JSON (live daemon probe).
+- [~] M4.2 — grill routes + re-lint loop covered by `grill-api.test.ts`; chat UI wiring unit-tested (`chat.ts`). Interactive browser chat needs `ANTHROPIC_API_KEY`, not run in the automated gate.
+- [x] M4.3 — live dry run: timeline filled for all three actors with inputs/outputs/durations/cost; node markers derived by `nodeMarkers` (unit-tested). Visual overlay movement not screenshotted.
+- [~] M4.4 — user task submitted over the API (204) with `usertask.submitted` event; incident resolution routes covered by `failure-ladder`/`api` tests. Browser-driven incident resolution not walked.
+- [x] M4.5 — `metricsForDefinition` returned `total:1, terminated:1, successRate:1, durationsMs:[…], costPerTask:[…]` for the live run (matches FR-23).
+- [x] M4.6 — `/api/scheduler` + `/api/logs` live and correctly shaped; armed-timer arm/clear proven by `scheduler.test.ts`. `SystemPage` renders them (component unit-tested via `parseLogLine`).
+- [x] `pnpm build && pnpm test` green across the workspace (shared 6, web 19, server 96/5 skipped); M1–M3 suites untouched and passing.
+
+## Build Findings (for the M5 author)
+
+- **`@types/node` needed in `packages/web`.** The tsconfig `types: ["vitest/globals", "node"]` fails with TS2688 unless `@types/node` is a web devDep (pnpm's isolated `node_modules` doesn't hoist it). Added `@types/node@^22`.
+- **bpmn-js ships types for the deep entry.** `bpmn-js/lib/NavigatedViewer` resolves its `.d.ts` under `moduleResolution: Bundler`, so no `@ts-expect-error` is needed on the import (an unused directive is itself a TS error). `viewerRef` stays `any` for the diagram-js service getters.
+- **SchemaForm raw-JSON toggle is a `<button>`, not a checkbox.** The Task 13 test queries `getByRole('button', { name: /raw json/i })`; a checkbox has role `checkbox` and would fail. The escape-hatch `<textarea>` carries `aria-label="raw json"` so `getByRole('textbox')` is unambiguous in raw mode.
+- **Tests that start a dry run must `await` the completion promise.** `events-vocab.test.ts` first left `host.start(...)` un-awaited; the engine finished after `afterEach` closed the store, producing an unhandled `Database.prepare` rejection (green summary, exit 1). Await completion before the store closes.
+- **Live gate (automated, temp data dir):** SPA served at `/` with history-route fallback; API-priority 404 for unknown `/api/*`; log ring populated by pino (FR-25); upload → lint (`daily-loop-refined` deployable) → dry-run by definitionId records `definitionId`/`versionNo`; timeline filled all three actors; `usertask.created`/`usertask.submitted` events; run terminated via terminate-end; `metricsForDefinition` returned `terminated:1, successRate:1, durationsMs:[…]`. The init branch terminates before arming the daily timer, so `/api/scheduler` was empty in that path — armed-timer arm/clear is proven separately by `scheduler.test.ts` (loop.bpmn).
+- **Not exercised here:** interactive browser walk (bpmn-js visual render, per-page console-error check) and the grill chat (needs `ANTHROPIC_API_KEY`). The grill *routes* and re-lint loop are covered by `grill-api.test.ts`; the chat UI wiring is unit-tested via `chat.ts`.
 
 ## Deferred (deliberately not in M4)
 
