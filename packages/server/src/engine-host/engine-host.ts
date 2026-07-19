@@ -158,6 +158,7 @@ export class EngineHost {
 
     if (action === 'abort') {
       this.store.resolveIncident(incidentId, 'abort');
+      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'abort');
       this.holds.delete(key);
       await this.abort(incident.instanceId);
       return;
@@ -165,6 +166,7 @@ export class EngineHost {
     if (action === 'skip') {
       validateOutput(hold.contract.outputSchema, output ?? {}); // throws → incident stays open
       this.store.resolveIncident(incidentId, 'skip');
+      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'skip');
       this.store.setStatus(incident.instanceId, 'running');
       Object.assign(hold.environment.variables, output);
       hold.release(output ?? {});
@@ -174,6 +176,7 @@ export class EngineHost {
     try {
       const result = await hold.attempt();
       this.store.resolveIncident(incidentId, 'retry');
+      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'retry');
       this.store.setStatus(incident.instanceId, 'running');
       hold.release(result);
     } catch (err) {
