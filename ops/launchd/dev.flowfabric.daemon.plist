@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.flowfabric.daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>REPLACE_ME/dev/ai-engineering/flow-fabric/ops/run-daemon.sh</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>REPLACE_ME/.flow-fabric/logs/daemon.out.log</string>
+  <key>StandardErrorPath</key><string>REPLACE_ME/.flow-fabric/logs/daemon.err.log</string>
+</dict>
+</plist>
