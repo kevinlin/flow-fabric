@@ -7,10 +7,20 @@ import {
   type Histogram,
   type Tracer,
 } from '@opentelemetry/api';
-import { BasicTracerProvider, type SpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { MeterProvider, type MetricReader } from '@opentelemetry/sdk-metrics';
+import {
+  BasicTracerProvider,
+  BatchSpanProcessor,
+  type SpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+  type MetricReader,
+} from '@opentelemetry/sdk-metrics';
 import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { ForcedIdGenerator, instanceSpanIdFor, traceIdFor } from './ids.js';
 
 export type TaskActor = 'agent' | 'code' | 'user';
@@ -161,4 +171,29 @@ export class OtelTelemetry implements Telemetry {
     await this.tracerProvider.shutdown();
     await this.meterProvider.shutdown();
   }
+}
+
+export const NOOP_TELEMETRY: Telemetry = {
+  enabled: false,
+  taskExecution() {},
+  instanceEnded() {},
+  incidentRaised() {},
+  async flush() {},
+  async shutdown() {},
+};
+
+/** FR-24 gate: OTLP export only when OTEL_EXPORTER_OTLP_ENDPOINT is set
+ * (design §10 — config-gated, off by default). The exporters read the
+ * endpoint from the environment themselves. */
+export function initTelemetry(env: NodeJS.ProcessEnv = process.env): Telemetry {
+  if (!env.OTEL_EXPORTER_OTLP_ENDPOINT) return NOOP_TELEMETRY;
+  return new OtelTelemetry({
+    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+    metricReaders: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter(),
+        exportIntervalMillis: 15_000,
+      }),
+    ],
+  });
 }

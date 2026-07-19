@@ -8,7 +8,7 @@ import {
 } from '@opentelemetry/sdk-metrics';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { ForcedIdGenerator, instanceSpanIdFor, traceIdFor } from '../src/telemetry/ids.js';
-import { OtelTelemetry } from '../src/telemetry/telemetry.js';
+import { NOOP_TELEMETRY, OtelTelemetry, initTelemetry } from '../src/telemetry/telemetry.js';
 
 describe('telemetry ids', () => {
   it('derives stable, well-formed ids from the instance id', () => {
@@ -170,5 +170,28 @@ describe('instance root span + run metrics', () => {
     expect((inc as any).dataPoints[0].value).toBe(1);
     expect((inc as any).dataPoints[0].attributes).toMatchObject({ node_id: 'Task_flaky' });
     await telemetry.shutdown();
+  });
+});
+
+describe('initTelemetry gate', () => {
+  it('returns the no-op when OTEL_EXPORTER_OTLP_ENDPOINT is unset', () => {
+    const t = initTelemetry({});
+    expect(t.enabled).toBe(false);
+    expect(t).toBe(NOOP_TELEMETRY);
+    // no-op methods are safe to call
+    t.taskExecution({
+      instanceId: 'i', nodeId: 'n', actor: 'agent', attempt: 1,
+      status: 'completed', startedAt: 0, endedAt: 1,
+    });
+    t.incidentRaised('n');
+  });
+
+  it('returns a live OtelTelemetry when the endpoint is set', async () => {
+    const t = initTelemetry({ OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:4318' });
+    expect(t.enabled).toBe(true);
+    // nothing was recorded, so shutdown flushes empty buffers (no network hit
+    // for traces; the metric reader's final empty collect may log a benign
+    // export warning to stderr — expected, nothing is listening on 4318).
+    await t.shutdown();
   });
 });
