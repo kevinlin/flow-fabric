@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { InstanceStore } from './engine-host/store.js';
 import { EngineHost } from './engine-host/engine-host.js';
 import { Inbox } from './inbox/inbox.js';
@@ -9,6 +10,7 @@ import { AgentRunner } from './runners/agent.js';
 import { CodeRunner } from './runners/code.js';
 import { DefinitionStore } from './definitions/store.js';
 import { GrillHost } from './grill/session.js';
+import { LogRing } from './logs/ring.js';
 import { buildApi } from './api/server.js';
 
 const dataDir = process.env.FF_DATA_DIR ?? path.join(os.homedir(), '.flow-fabric');
@@ -28,7 +30,9 @@ const host = new EngineHost(store, {
 });
 inbox = new Inbox(store, host, notifier);
 const grill = new GrillHost({ definitions });
-const app = buildApi({ store, host, inbox, definitions, grill });
+const logRing = new LogRing();
+const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
+const app = buildApi({ store, host, inbox, definitions, grill, logRing, webRoot });
 
 const resumed = await host.resumeAll();
 for (const { id, completion } of resumed) {

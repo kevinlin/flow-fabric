@@ -8,7 +8,7 @@ Flow Fabric is a local, web-based control plane for AI Developer Workflows (ADWs
 
 ## Current state — read this first
 
-**M1–M3 are built; M4–M5 are not.** The design describes a full system; the UI doesn't exist yet.
+**M1–M4 are built; M5 is not.** The six web pages exist and run against the live daemon.
 
 Built (`packages/server/src/`, all exercised through tests — [index.ts](packages/server/src/index.ts) is the public surface):
 - `engine-host/` — `EngineHost` + `InstanceStore` (M1), plus `dispatch` (runner wiring into bpmn-engine) and `failure` (the ladder) from M2. Instance status gained `terminated` (M3) for terminate end events.
@@ -18,10 +18,12 @@ Built (`packages/server/src/`, all exercised through tests — [index.ts](packag
 - `linter/` — pure `lint(xml)` deployability gate, rules FF001–FF006 (M3, design §4.3).
 - `patch-ops/` — `applyPatchOps`: typed moddle edits that never touch DI (M3, design §7.3).
 - `grill/` — `GrillHost`/`GrillSession`: Claude Agent SDK chat whose only mutating tool is `propose_patch_ops`, with a re-lint feedback loop (M3).
-- `inbox/`, `notify/` — user-task inbox + macOS notifier. `api/server.ts` — Fastify REST + SSE. `daemon.ts` — the process entrypoint.
-- `packages/shared/src/` — profile types, moddle descriptor (`flowfabricModdle`), lint rule ids/types.
+- `inbox/`, `notify/` — user-task inbox + macOS notifier (deep-links to the inbox, `DEFAULT_INBOX_LINK`). `logs/ring.ts` — bounded pino ring buffer (M4). `api/server.ts` — Fastify REST + SSE, and serves the built SPA from `packages/web/dist` at `/` (API routes win; SPA fallback for history routes). `daemon.ts` — the process entrypoint.
+- M4 server additions: instance→definition linkage (`definition_id`/`version_no` on `instances`, migration-guarded), `metricsForDefinition` + `GET /api/metrics/definitions/:id` (FR-23), armed-timer registry + `GET /api/scheduler` (FR-25), `GET /api/logs` (FR-25), `GET /api/definitions/:id/versions`, `GET /api/grill/sessions/:id`, `GET /api/task-executions/:id/transcript`, and the SSE vocabulary `usertask.created/submitted` + `incident.resolved`.
+- `packages/web/` — React 19 + Vite 7 SPA (M4): hash-routed six pages (Definitions, Refine, Instances+detail, Inbox, Dashboards, System). `bpmn-js` NavigatedViewer render + token overlay, native `EventSource` SSE, a hand-rolled `SchemaForm` (flat JSON-Schema + raw-JSON escape hatch), typed API client over `@flowfabric/shared` DTOs. Pure libs (`node-status`, `instance-view`, `chat`, `logs`) are unit-tested; components via `@testing-library/react` + jsdom.
+- `packages/shared/src/` — profile types, moddle descriptor (`flowfabricModdle`), lint rule ids/types, and `api/types.ts` DTOs (M4) consumed by web and pinned by the server.
 
-Not built (still spec — don't assume they exist): OTel/soak (M5). `packages/web` is still an echo-script placeholder until M4.
+Not built (still spec — don't assume they exist): OTel traces/metrics + soak (M5).
 
 **Daemon entrypoint:** `pnpm --filter @flowfabric/server dev` boots [daemon.ts](packages/server/src/daemon.ts) — wires store + host + inbox + notifier + definitions + grill + API, calls `resumeAll()`, and listens on `FF_PORT` (default 4400), data dir `FF_DATA_DIR` (default `~/.flow-fabric`). M1's go/no-go gate on `bpmn-engine` passed (verdict GO).
 
@@ -48,9 +50,9 @@ Test files: `packages/server/test/*.test.ts` — M1 engine (`smoke`, `engine-bas
 Target shape (design): modular monolith, one Node daemon hosting the BPMN engine, scheduler, REST + SSE API, and serving the built SPA. Module boundaries are internal packages, not processes.
 
 Monorepo (`packages/*`):
-- `shared/` — profile types + moddle descriptor (built); lint rule IDs still to come in M3
+- `shared/` — profile types + moddle descriptor + lint rule IDs + API DTOs (built)
 - `server/` — the daemon and all backend modules
-- `web/` — React + Vite SPA (placeholder until M4)
+- `web/` — React + Vite SPA (built, M4). `pnpm --filter @flowfabric/web dev` runs Vite on :5173 proxying `/api` → :4400; `pnpm --filter @flowfabric/web build` emits `dist/` that the daemon serves. Web tsconfig is `Bundler` resolution (extensionless imports) — the `.js`-extension NodeNext rule does not apply here.
 
 Control-plane state lives in `~/.flow-fabric/` (SQLite + agent transcripts + definition versions). The workspace is pure workload — the platform never writes its own state there.
 
@@ -74,7 +76,7 @@ Every task goes through a `RunTaskFn` seam:
 
 **User tasks (inbox):** a `userTask` emits `activity.wait` → `onUserTaskWait` → `Inbox` ([inbox.ts](packages/server/src/inbox/inbox.ts)) creates a `user_tasks` row and notifies. `submit` validates vars against the contract's `formSchema` (FR-13), then `EngineHost.signal()` merges vars into process variables and releases the token. Idempotent across resumes (dedupes on a pending row).
 
-**API surface** ([api/server.ts](packages/server/src/api/server.ts), Fastify): `POST /api/instances` (start; 409 on workspace lock), `GET /api/instances[/:id]` (instance + timeline + events), `POST /api/instances/:id/abort`, `GET /api/inbox`, `POST /api/user-tasks/:id/submit`, `POST /api/incidents/:id/resolve`, and `GET /api/events` (SSE, fanned out from `InstanceStore.onEvent`).
+**API surface** ([api/server.ts](packages/server/src/api/server.ts), Fastify): `POST /api/instances` (start; 409 on workspace lock; records definition linkage), `GET /api/instances[/:id]` (instance + timeline + events), `POST /api/instances/:id/abort`, `GET /api/inbox`, `POST /api/user-tasks/:id/submit`, `POST /api/incidents/:id/resolve`, `GET /api/events` (SSE, fanned out from `InstanceStore.onEvent`), plus M4 reads: `GET /api/metrics/definitions/:id`, `GET /api/scheduler`, `GET /api/logs`, `GET /api/definitions/:id/versions`, `GET /api/grill/sessions/:id`, `GET /api/task-executions/:id/transcript`. Non-`/api` GETs serve the built SPA (`@fastify/static`, `webRoot` = `packages/web/dist`).
 
 ## bpmn-engine gotchas (from the M1 spike — see [plan_m1-engine-spike.md § Spike Findings](docs/specs/plan_m1-engine-spike.md#spike-findings))
 

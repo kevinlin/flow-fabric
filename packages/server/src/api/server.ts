@@ -1,12 +1,26 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync, existsSync } from 'node:fs';
 import Fastify, { type FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
 import type { DefinitionStore } from '../definitions/store.js';
 import type { GrillHost } from '../grill/session.js';
+import type { LogRing } from '../logs/ring.js';
 import { lint } from '../linter/lint.js';
 import { OutputValidationError } from '../runners/validate.js';
+import type {
+  DefinitionMetricsDto,
+  SchedulerDto,
+} from '@flowfabric/shared';
+import type { DefinitionMetrics } from '../engine-host/store.js';
+
+// Compile-time guards: server return shapes must remain assignable to the DTOs.
+type _MetricsPin = DefinitionMetrics extends DefinitionMetricsDto ? true : never;
+type _SchedulerPin = { timers: ReturnType<EngineHost['scheduledTimers']> } extends SchedulerDto ? true : never;
+const _dtoPins: [_MetricsPin, _SchedulerPin] = [true, true];
+void _dtoPins;
 
 export interface ApiDeps {
   store: InstanceStore;
@@ -14,10 +28,14 @@ export interface ApiDeps {
   inbox: Inbox;
   definitions?: DefinitionStore;
   grill?: GrillHost;
+  logRing?: LogRing;
+  webRoot?: string;
 }
 
-export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): FastifyInstance {
-  const app = Fastify();
+export function buildApi({ store, host, inbox, definitions, grill, logRing, webRoot }: ApiDeps): FastifyInstance {
+  const app = Fastify(
+    logRing ? { logger: { level: 'info', stream: logRing } } : {},
+  );
 
   app.get('/api/healthz', async () => ({ ok: true }));
 
@@ -34,6 +52,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
     };
     let name = body.name ?? 'instance';
     let source = body.source;
+    let definitionId: string | undefined;
+    let versionNo: number | undefined;
     if (body.definitionId) {
       if (!definitions) return reply.code(400).send({ error: 'no definition store configured' });
       const version = body.version !== undefined
@@ -43,6 +63,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
       if (!version.deployable) {
         return reply.code(400).send({ error: `version ${version.versionNo} is not deployable; lint it clean first (FR-3)` });
       }
+      definitionId = body.definitionId;
+      versionNo = version.versionNo;
       source = version.xml;
       name = definitions.getDefinition(body.definitionId)?.name ?? name;
     }
@@ -59,6 +81,8 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
         variables: body.inputs,
         dryRun: body.dryRun,
         stubOverrides: body.stubOverrides,
+        definitionId,
+        versionNo,
       });
       completion.catch((err) => app.log.error({ err, id }, 'instance failed'));
     } catch (err) {
@@ -141,6 +165,28 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
     return reply; // keep the connection open
   });
 
+  app.get('/api/metrics/definitions/:id', async (req) =>
+    store.metricsForDefinition((req.params as { id: string }).id),
+  );
+
+  app.get('/api/scheduler', async () => ({ timers: host.scheduledTimers() }));
+
+  app.get('/api/logs', async (req) => {
+    const { limit } = req.query as { limit?: string };
+    return { lines: logRing?.lines(limit ? Number(limit) : undefined) ?? [] };
+  });
+
+  app.get('/api/task-executions/:id/transcript', async (req, reply) => {
+    const exec = store.getTaskExecution(Number((req.params as { id: string }).id));
+    if (!exec?.transcriptPath) return reply.code(404).send({ error: 'no transcript' });
+    try {
+      reply.header('content-type', 'text/plain');
+      return readFileSync(exec.transcriptPath, 'utf8');
+    } catch {
+      return reply.code(404).send({ error: 'transcript file missing' });
+    }
+  });
+
   if (definitions) {
     app.post('/api/definitions', async (req, reply) => {
       const { name, xml } = req.body as { name: string; xml: string };
@@ -149,6 +195,10 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
     });
 
     app.get('/api/definitions', async () => ({ definitions: definitions.listDefinitions() }));
+
+    app.get('/api/definitions/:id/versions', async (req) => ({
+      versions: definitions.listVersions((req.params as { id: string }).id),
+    }));
 
     app.get('/api/definitions/:id/versions/:v', async (req, reply) => {
       const { id, v } = req.params as { id: string; v: string };
@@ -178,6 +228,12 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
       } catch (err) {
         return reply.code(404).send({ error: String(err) });
       }
+    });
+
+    app.get('/api/grill/sessions/:id', async (req, reply) => {
+      const session = grill.get((req.params as { id: string }).id);
+      if (!session) return reply.code(404).send({ error: 'no such session' });
+      return { sessionId: session.id, xml: session.xml, lint: session.lintReport };
     });
 
     app.post('/api/grill/sessions/:id/messages', async (req, reply) => {
@@ -212,6 +268,18 @@ export function buildApi({ store, host, inbox, definitions, grill }: ApiDeps): F
         reply.raw.end();
       });
       return reply;
+    });
+  }
+
+  if (webRoot && existsSync(webRoot)) {
+    // wildcard:false — static serves only exact file paths (index.html, /assets/*);
+    // everything else falls through to the notFoundHandler for the SPA fallback.
+    // With the default wildcard:true, a `GET /*` route would swallow unmatched
+    // /api/* requests before the handler runs.
+    app.register(fastifyStatic, { root: webRoot, wildcard: false });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) return reply.code(404).send({ error: 'not found' });
+      return reply.sendFile('index.html');
     });
   }
 

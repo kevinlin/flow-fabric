@@ -2,7 +2,7 @@ import type { AgentTaskContract, CodeTaskContract } from '@flowfabric/shared';
 import type { InstanceStore } from './store.js';
 import type { DispatchDeps, EngineEnvironment, RunTaskFn } from './dispatch.js';
 import { makeSingleAttemptRunTask } from './dispatch.js';
-import type { Notifier } from '../notify/notifier.js';
+import { type Notifier, DEFAULT_INBOX_LINK } from '../notify/notifier.js';
 
 type Contract = AgentTaskContract | CodeTaskContract;
 
@@ -65,7 +65,8 @@ export function makeLadderRunTask(deps: LadderDeps): RunTaskFn {
         deps.store.appendEvent(deps.instanceId, 'incident.raised', nodeId, String(lastError));
         void deps.notifier?.notify(
           'Flow Fabric incident',
-          `${deps.instanceId}: ${nodeId} failed after ${contract.retries + 1} attempts`,
+          `${nodeId} failed after ${contract.retries + 1} attempts`,
+          DEFAULT_INBOX_LINK,
         );
         hold(incidentId);
       })();

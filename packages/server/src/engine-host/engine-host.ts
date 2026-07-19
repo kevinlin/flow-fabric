@@ -11,6 +11,13 @@ import type { Notifier } from '../notify/notifier.js';
 import { validateOutput } from '../runners/validate.js';
 
 const SNAPSHOT_EVENTS = ['activity.start', 'activity.wait', 'activity.timer', 'activity.end'];
+const TIMER_CLEAR_EVENTS = ['activity.timeout', 'activity.end', 'activity.error'];
+
+export interface ArmedTimer {
+  instanceId: string;
+  nodeId: string;
+  expireAt: number;
+}
 
 /** The dispatch hooks (extensions/scripts) and custom moddle exceed
  * bpmn-engine's published option types; cast at the engine boundary only. */
@@ -51,8 +58,14 @@ export class EngineHost {
   private holds = new Map<string, Hold>();
   private aborting = new Set<string>();
   private terminated = new Set<string>();
+  private timers = new Map<string, ArmedTimer>();
 
   constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {}
+
+  /** Armed duration timers across all running instances (FR-25 scheduler view). */
+  scheduledTimers(): ArmedTimer[] {
+    return [...this.timers.values()].sort((a, b) => a.expireAt - b.expireAt);
+  }
 
   /**
    * Start a new instance. Resolves on completion or stop; rejects on engine error.
@@ -67,11 +80,15 @@ export class EngineHost {
     variables?: Record<string, unknown>;
     dryRun?: boolean;
     stubOverrides?: Record<string, Record<string, unknown>>;
+    definitionId?: string;
+    versionNo?: number;
   }): Promise<void> {
     this.store.createInstance(opts.id, opts.name, opts.source, {
       workspace: opts.workspace,
       dryRun: opts.dryRun,
       stubOverrides: opts.stubOverrides,
+      definitionId: opts.definitionId,
+      versionNo: opts.versionNo,
     });
     return this.startEngine(opts);
   }
@@ -141,6 +158,7 @@ export class EngineHost {
 
     if (action === 'abort') {
       this.store.resolveIncident(incidentId, 'abort');
+      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'abort');
       this.holds.delete(key);
       await this.abort(incident.instanceId);
       return;
@@ -148,6 +166,7 @@ export class EngineHost {
     if (action === 'skip') {
       validateOutput(hold.contract.outputSchema, output ?? {}); // throws → incident stays open
       this.store.resolveIncident(incidentId, 'skip');
+      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'skip');
       this.store.setStatus(incident.instanceId, 'running');
       Object.assign(hold.environment.variables, output);
       hold.release(output ?? {});
@@ -157,6 +176,7 @@ export class EngineHost {
     try {
       const result = await hold.attempt();
       this.store.resolveIncident(incidentId, 'retry');
+      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'retry');
       this.store.setStatus(incident.instanceId, 'running');
       hold.release(result);
     } catch (err) {
@@ -222,6 +242,11 @@ export class EngineHost {
         this.store.appendEvent(id, event, api.id);
         if (this.profiles.get(id)?.terminateEnds.has(api.id)) this.terminated.add(id);
         snapshot();
+        if (event === 'activity.timer') {
+          const content = (api as { content?: { expireAt?: string | number | Date } }).content;
+          const expireAt = content?.expireAt ? new Date(content.expireAt).getTime() : Date.now();
+          this.timers.set(`${id}:${api.id}`, { instanceId: id, nodeId: api.id, expireAt });
+        }
         if (event === 'activity.wait') {
           const contract = this.profiles.get(id)?.contracts.get(api.id);
           if (contract?.kind === 'user') {
@@ -229,6 +254,9 @@ export class EngineHost {
           }
         }
       });
+    }
+    for (const event of TIMER_CLEAR_EVENTS) {
+      listener.on(event, (api: { id: string }) => this.timers.delete(`${id}:${api.id}`));
     }
 
     const outcome = new Promise<'end' | 'stop'>((resolve, reject) => {
@@ -263,6 +291,7 @@ export class EngineHost {
       this.store.appendEvent(id, 'engine.error', undefined, String(err));
       throw err;
     } finally {
+      for (const key of this.timers.keys()) if (key.startsWith(`${id}:`)) this.timers.delete(key);
       this.running.delete(id);
     }
   }

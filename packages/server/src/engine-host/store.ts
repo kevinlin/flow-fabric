@@ -19,6 +19,10 @@ export interface InstanceRow {
   workspace: string;
   dryRun: boolean;
   stubOverrides: string | null;
+  definitionId: string | null;
+  versionNo: number | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface EventRow {
@@ -66,7 +70,9 @@ export interface IncidentRow {
 }
 
 const INSTANCE_COLUMNS = `id, name, source, status, engine_state AS engineState,
-  workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides`;
+  workspace_path AS workspace, dry_run AS dryRun, stub_overrides AS stubOverrides,
+  definition_id AS definitionId, version_no AS versionNo,
+  created_at AS createdAt, updated_at AS updatedAt`;
 
 const USER_TASK_COLUMNS = `id, instance_id AS instanceId, node_id AS nodeId,
   form_schema AS formSchema, status, submitted_vars AS submittedVars,
@@ -104,6 +110,8 @@ export class InstanceStore {
         workspace_path TEXT NOT NULL DEFAULT '',
         dry_run INTEGER NOT NULL DEFAULT 0,
         stub_overrides TEXT,
+        definition_id TEXT,
+        version_no INTEGER,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       );
@@ -156,6 +164,12 @@ export class InstanceStore {
         ON instances(workspace_path)
         WHERE status IN ('running', 'incident') AND workspace_path != '';
     `);
+    // Migration guard: DBs created before M4 lack the definition linkage columns.
+    const cols = this.db.prepare(`PRAGMA table_info(instances)`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'definition_id')) {
+      this.db.exec(`ALTER TABLE instances ADD COLUMN definition_id TEXT;
+                    ALTER TABLE instances ADD COLUMN version_no INTEGER;`);
+    }
   }
 
   createInstance(
@@ -166,14 +180,17 @@ export class InstanceStore {
       workspace?: string;
       dryRun?: boolean;
       stubOverrides?: Record<string, Record<string, unknown>>;
+      definitionId?: string;
+      versionNo?: number;
     } = {},
   ): void {
     const now = Date.now();
     this.db
       .prepare(
         `INSERT INTO instances
-           (id, name, source, status, engine_state, workspace_path, dry_run, stub_overrides, created_at, updated_at)
-         VALUES (?, ?, ?, 'running', NULL, ?, ?, ?, ?, ?)`,
+           (id, name, source, status, engine_state, workspace_path, dry_run, stub_overrides,
+            definition_id, version_no, created_at, updated_at)
+         VALUES (?, ?, ?, 'running', NULL, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -182,6 +199,8 @@ export class InstanceStore {
         opts.workspace ?? '',
         opts.dryRun ? 1 : 0,
         opts.stubOverrides ? JSON.stringify(opts.stubOverrides) : null,
+        opts.definitionId ?? null,
+        opts.versionNo ?? null,
         now,
         now,
       );
@@ -343,6 +362,12 @@ export class InstanceStore {
       );
   }
 
+  getTaskExecution(id: number): TaskExecutionRow | undefined {
+    return this.db
+      .prepare(`SELECT ${TASK_EXECUTION_COLUMNS} FROM task_executions WHERE id = ?`)
+      .get(id) as TaskExecutionRow | undefined;
+  }
+
   listTaskExecutions(instanceId: string): TaskExecutionRow[] {
     return this.db
       .prepare(`SELECT ${TASK_EXECUTION_COLUMNS} FROM task_executions WHERE instance_id = ? ORDER BY id`)
@@ -388,7 +413,76 @@ export class InstanceStore {
       .run(resolution, Date.now(), id);
   }
 
+  metricsForDefinition(definitionId: string): DefinitionMetrics {
+    const byStatus = this.db
+      .prepare(`SELECT status, COUNT(*) AS n FROM instances WHERE definition_id = ? GROUP BY status`)
+      .all(definitionId) as Array<{ status: InstanceStatus; n: number }>;
+    const count = (s: InstanceStatus) => byStatus.find((r) => r.status === s)?.n ?? 0;
+    const completed = count('completed');
+    const terminated = count('terminated');
+    const aborted = count('aborted');
+    const error = count('error');
+    const total = byStatus.reduce((sum, r) => sum + r.n, 0);
+    const finished = completed + terminated + aborted + error;
+
+    const durationsMs = (
+      this.db
+        .prepare(
+          `SELECT updated_at - created_at AS d FROM instances
+           WHERE definition_id = ? AND status IN ('completed', 'terminated') ORDER BY created_at`,
+        )
+        .all(definitionId) as Array<{ d: number }>
+    ).map((r) => r.d);
+
+    const costPerRun = this.db
+      .prepare(
+        `SELECT i.id AS instanceId, COALESCE(SUM(te.cost_usd), 0) AS costUsd
+         FROM instances i LEFT JOIN task_executions te ON te.instance_id = i.id
+         WHERE i.definition_id = ? GROUP BY i.id ORDER BY i.created_at`,
+      )
+      .all(definitionId) as Array<{ instanceId: string; costUsd: number }>;
+
+    const costPerTask = this.db
+      .prepare(
+        `SELECT te.node_id AS nodeId, COUNT(*) AS runs,
+                COALESCE(SUM(te.cost_usd), 0) AS totalCostUsd,
+                AVG(te.ended_at - te.started_at) AS avgDurationMs
+         FROM task_executions te JOIN instances i ON i.id = te.instance_id
+         WHERE i.definition_id = ? AND te.status = 'completed'
+         GROUP BY te.node_id ORDER BY te.node_id`,
+      )
+      .all(definitionId) as DefinitionMetrics['costPerTask'];
+
+    const inc = this.db
+      .prepare(
+        `SELECT COUNT(*) AS total, COALESCE(SUM(inc.status = 'open'), 0) AS open
+         FROM incidents inc JOIN instances i ON i.id = inc.instance_id
+         WHERE i.definition_id = ?`,
+      )
+      .get(definitionId) as { total: number; open: number };
+
+    return {
+      runs: { total, completed, terminated, aborted, error, active: total - finished },
+      successRate: finished === 0 ? null : (completed + terminated) / finished,
+      durationsMs,
+      costPerRun,
+      costPerTask,
+      incidents: inc,
+    };
+  }
+
   close(): void {
     this.db.close();
   }
+}
+
+export interface DefinitionMetrics {
+  runs: { total: number; completed: number; terminated: number; aborted: number; error: number; active: number };
+  /** (completed+terminated) / all finished runs; null when nothing finished yet. */
+  successRate: number | null;
+  /** Wall-clock duration of each successfully finished run (completed/terminated). */
+  durationsMs: number[];
+  costPerRun: Array<{ instanceId: string; costUsd: number }>;
+  costPerTask: Array<{ nodeId: string; runs: number; totalCostUsd: number; avgDurationMs: number | null }>;
+  incidents: { total: number; open: number };
 }

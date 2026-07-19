@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process';
 
+/** The daemon serves the SPA at `/`; the inbox is a hash route. Notifications deep-link here (FR-13). */
+export const DEFAULT_INBOX_LINK = 'http://127.0.0.1:4400/#/inbox';
+
 export interface Notifier {
   notify(title: string, body: string, link?: string): Promise<void>;
 }
