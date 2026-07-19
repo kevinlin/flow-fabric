@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { InstanceStore } from './engine-host/store.js';
 import { EngineHost } from './engine-host/engine-host.js';
 import { Inbox } from './inbox/inbox.js';
@@ -30,7 +31,8 @@ const host = new EngineHost(store, {
 inbox = new Inbox(store, host, notifier);
 const grill = new GrillHost({ definitions });
 const logRing = new LogRing();
-const app = buildApi({ store, host, inbox, definitions, grill, logRing });
+const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
+const app = buildApi({ store, host, inbox, definitions, grill, logRing, webRoot });
 
 const resumed = await host.resumeAll();
 for (const { id, completion } of resumed) {

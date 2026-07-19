@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import Fastify, { type FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
 import type { Inbox } from '../inbox/inbox.js';
@@ -28,9 +29,10 @@ export interface ApiDeps {
   definitions?: DefinitionStore;
   grill?: GrillHost;
   logRing?: LogRing;
+  webRoot?: string;
 }
 
-export function buildApi({ store, host, inbox, definitions, grill, logRing }: ApiDeps): FastifyInstance {
+export function buildApi({ store, host, inbox, definitions, grill, logRing, webRoot }: ApiDeps): FastifyInstance {
   const app = Fastify(
     logRing ? { logger: { level: 'info', stream: logRing } } : {},
   );
@@ -266,6 +268,18 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing }: Ap
         reply.raw.end();
       });
       return reply;
+    });
+  }
+
+  if (webRoot && existsSync(webRoot)) {
+    // wildcard:false — static serves only exact file paths (index.html, /assets/*);
+    // everything else falls through to the notFoundHandler for the SPA fallback.
+    // With the default wildcard:true, a `GET /*` route would swallow unmatched
+    // /api/* requests before the handler runs.
+    app.register(fastifyStatic, { root: webRoot, wildcard: false });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) return reply.code(404).send({ error: 'not found' });
+      return reply.sendFile('index.html');
     });
   }
 
