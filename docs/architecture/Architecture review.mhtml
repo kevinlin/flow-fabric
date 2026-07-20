@@ -1,0 +1,1985 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: file:///private/var/folders/q9/90x2_90s73z9sz5qgxzhnbc40000gq/T/architecture-review-20260720-074829.html
+Subject: =?utf-8?Q?Architecture=20review=20=E2=80=94=20flow-fabric?=
+Date: Mon, 20 Jul 2026 10:11:10 +0800
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--GvtCEdxnQBEQ0rUtGHwMyqTcVeEQrL0c3hXsZswgIM----"
+
+
+------MultipartBoundary--GvtCEdxnQBEQ0rUtGHwMyqTcVeEQrL0c3hXsZswgIM----
+Content-Type: text/html
+Content-ID: <frame-BB73DA7C6CD9F2FE17930BE5699572BB@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: file:///private/var/folders/q9/90x2_90s73z9sz5qgxzhnbc40000gq/T/architecture-review-20260720-074829.html
+
+<!DOCTYPE html><html lang=3D"en"><head><meta http-equiv=3D"Content-Type" co=
+ntent=3D"text/html; charset=3DUTF-8"><link rel=3D"stylesheet" type=3D"text/=
+css" href=3D"cid:css-60348f70-a11d-4fef-96e5-6d6598fb7693@mhtml.blink" /><l=
+ink rel=3D"stylesheet" type=3D"text/css" href=3D"cid:css-0085eed1-61f6-4da2=
+-bafd-1e2168bfb500@mhtml.blink" />
+   =20
+    <title>Architecture review =E2=80=94 flow-fabric</title>
+   =20
+   =20
+   =20
+  </head>
+  <body class=3D"bg-stone-50 text-slate-900 font-sans">
+    <main class=3D"max-w-5xl mx-auto px-6 py-12 space-y-14">
+
+      <header class=3D"space-y-3">
+        <h1 class=3D"font-serif text-3xl">Architecture review =E2=80=94 flo=
+w-fabric</h1>
+        <p class=3D"text-sm text-slate-500">2026-07-20 =C2=B7 scoped to the=
+ git hot spots: M5 telemetry wiring, the API surface, the web SPA</p>
+        <div class=3D"flex flex-wrap gap-4 text-xs text-slate-600 pt-1">
+          <span class=3D"inline-flex items-center gap-1.5"><span class=3D"w=
+-4 h-3 border border-slate-400 bg-white inline-block"></span> module</span>
+          <span class=3D"inline-flex items-center gap-1.5"><span class=3D"w=
+-4 h-0 border-t-2 border-dashed border-slate-400 inline-block"></span> seam=
+</span>
+          <span class=3D"inline-flex items-center gap-1.5"><span class=3D"w=
+-4 h-0 border-t-2 border-red-600 inline-block"></span> leakage</span>
+          <span class=3D"inline-flex items-center gap-1.5"><span class=3D"w=
+-4 h-3 deep-box inline-block rounded-sm"></span> deep module</span>
+        </div>
+      </header>
+
+      <section id=3D"candidates" class=3D"space-y-12">
+
+        <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D CANDIDATE 1 =3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D -->
+        <article id=3D"c1" class=3D"bg-white rounded-xl border border-slate=
+-200 p-8 space-y-5 shadow-sm">
+          <div class=3D"flex items-start justify-between gap-4">
+            <h2 class=3D"font-serif text-2xl">1 =C2=B7 Build the <span clas=
+s=3D"italic">events</span> module the design already names</h2>
+            <div class=3D"flex gap-2 shrink-0">
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-emerald-100 text-emerald-800">Strong</span>
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-100 text-slate-600">ports &amp; adapters</span>
+            </div>
+          </div>
+          <p class=3D"font-mono text-sm text-slate-500">packages/server/src=
+/engine-host/store.ts =C2=B7 telemetry/telemetry.ts =C2=B7 api/server.ts:14=
+9-166 =C2=B7 daemon.ts</p>
+
+          <div class=3D"grid md:grid-cols-2 gap-4">
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">Before =E2=80=94 the DAO is also the bus and the emitter</p>
+              <pre class=3D"mermaid" data-processed=3D"true"><svg id=3D"mer=
+maid-1784505152650" width=3D"100%" xmlns=3D"http://www.w3.org/2000/svg" xml=
+ns:xlink=3D"http://www.w3.org/1999/xlink" class=3D"flowchart" style=3D"max-=
+width: 809.58984375px;" viewBox=3D"0 0 809.58984375 352" role=3D"graphics-d=
+ocument document" aria-roledescription=3D"flowchart-v2"><style>#mermaid-178=
+4505152650{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16=
+px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}=
+}@keyframes dash{to{stroke-dashoffset:0;}}#mermaid-1784505152650 .edge-anim=
+ation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:d=
+ash 50s linear infinite;stroke-linecap:round;}#mermaid-1784505152650 .edge-=
+animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animati=
+on:dash 20s linear infinite;stroke-linecap:round;}#mermaid-1784505152650 .e=
+rror-icon{fill:#552222;}#mermaid-1784505152650 .error-text{fill:#552222;str=
+oke:#552222;}#mermaid-1784505152650 .edge-thickness-normal{stroke-width:1px=
+;}#mermaid-1784505152650 .edge-thickness-thick{stroke-width:3.5px;}#mermaid=
+-1784505152650 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-17845051526=
+50 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-17845051526=
+50 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-1784505152650 .edge-pa=
+ttern-dotted{stroke-dasharray:2;}#mermaid-1784505152650 .marker{fill:#666;s=
+troke:#666;}#mermaid-1784505152650 .marker.cross{stroke:#666;}#mermaid-1784=
+505152650 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size=
+:16px;}#mermaid-1784505152650 p{margin:0;}#mermaid-1784505152650 .label{fon=
+t-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#mermaid-17=
+84505152650 .cluster-label text{fill:#333;}#mermaid-1784505152650 .cluster-=
+label span{color:#333;}#mermaid-1784505152650 .cluster-label span p{backgro=
+und-color:transparent;}#mermaid-1784505152650 .label text,#mermaid-17845051=
+52650 span{fill:#000000;color:#000000;}#mermaid-1784505152650 .node rect,#m=
+ermaid-1784505152650 .node circle,#mermaid-1784505152650 .node ellipse,#mer=
+maid-1784505152650 .node polygon,#mermaid-1784505152650 .node path{fill:#ee=
+e;stroke:#999;stroke-width:1px;}#mermaid-1784505152650 .rough-node .label t=
+ext,#mermaid-1784505152650 .node .label text,#mermaid-1784505152650 .image-=
+shape .label,#mermaid-1784505152650 .icon-shape .label{text-anchor:middle;}=
+#mermaid-1784505152650 .node .katex path{fill:#000;stroke:#000;stroke-width=
+:1px;}#mermaid-1784505152650 .rough-node .label,#mermaid-1784505152650 .nod=
+e .label,#mermaid-1784505152650 .image-shape .label,#mermaid-1784505152650 =
+.icon-shape .label{text-align:center;}#mermaid-1784505152650 .node.clickabl=
+e{cursor:pointer;}#mermaid-1784505152650 .root .anchor path{fill:#666!impor=
+tant;stroke-width:0;stroke:#666;}#mermaid-1784505152650 .arrowheadPath{fill=
+:#333333;}#mermaid-1784505152650 .edgePath .path{stroke:#666;stroke-width:1=
+px;}#mermaid-1784505152650 .flowchart-link{stroke:#666;fill:none;}#mermaid-=
+1784505152650 .edgeLabel{background-color:white;text-align:center;}#mermaid=
+-1784505152650 .edgeLabel p{background-color:white;}#mermaid-1784505152650 =
+.edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#mermaid-178=
+4505152650 .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#mermaid-17=
+84505152650 .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#707070;st=
+roke-width:1px;}#mermaid-1784505152650 .cluster text{fill:#333;}#mermaid-17=
+84505152650 .cluster span{color:#333;}#mermaid-1784505152650 div.mermaidToo=
+ltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-f=
+amily:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl=
+(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;point=
+er-events:none;z-index:100;}#mermaid-1784505152650 .flowchartTitleText{text=
+-anchor:middle;font-size:18px;fill:#000000;}#mermaid-1784505152650 rect.tex=
+t{fill:none;stroke-width:0;}#mermaid-1784505152650 .icon-shape,#mermaid-178=
+4505152650 .image-shape{background-color:white;text-align:center;}#mermaid-=
+1784505152650 .icon-shape p,#mermaid-1784505152650 .image-shape p{backgroun=
+d-color:white;padding:2px;}#mermaid-1784505152650 .icon-shape .label rect,#=
+mermaid-1784505152650 .image-shape .label rect{opacity:0.5;background-color=
+:white;fill:white;}#mermaid-1784505152650 .label-icon{display:inline-block;=
+height:1em;overflow:visible;vertical-align:-0.125em;}#mermaid-1784505152650=
+ .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert=
+;}#mermaid-1784505152650 .node .neo-node{stroke:#999;}#mermaid-178450515265=
+0 [data-look=3D"neo"].node rect,#mermaid-1784505152650 [data-look=3D"neo"].=
+cluster rect,#mermaid-1784505152650 [data-look=3D"neo"].node polygon{stroke=
+:url(#mermaid-1784505152650-gradient);filter:drop-shadow( 1px 2px 2px rgba(=
+185,185,185,1));}#mermaid-1784505152650 [data-look=3D"neo"].swimlane.cluste=
+r rect{filter:none;}#mermaid-1784505152650 [data-look=3D"neo"].node path{st=
+roke:url(#mermaid-1784505152650-gradient);stroke-width:1px;}#mermaid-178450=
+5152650 [data-look=3D"neo"].node .outer-path{filter:drop-shadow( 1px 2px 2p=
+x rgba(185,185,185,1));}#mermaid-1784505152650 [data-look=3D"neo"].node .ne=
+o-line path{stroke:#999;filter:none;}#mermaid-1784505152650 [data-look=3D"n=
+eo"].node circle{stroke:url(#mermaid-1784505152650-gradient);filter:drop-sh=
+adow( 1px 2px 2px rgba(185,185,185,1));}#mermaid-1784505152650 [data-look=
+=3D"neo"].node circle .state-start{fill:#000000;}#mermaid-1784505152650 [da=
+ta-look=3D"neo"].icon-shape .icon{fill:url(#mermaid-1784505152650-gradient)=
+;filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#mermaid-17845051526=
+50 [data-look=3D"neo"].icon-shape .icon-neo path{stroke:url(#mermaid-178450=
+5152650-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#me=
+rmaid-1784505152650 :root{--mermaid-font-family:"trebuchet ms",verdana,aria=
+l,sans-serif;}#mermaid-1784505152650 .leak&gt;*{stroke:rgb(220, 38, 38)!imp=
+ortant;stroke-width:2px!important;}#mermaid-1784505152650 .leak span{stroke=
+:rgb(220, 38, 38)!important;stroke-width:2px!important;}</style><g><marker =
+id=3D"mermaid-1784505152650_flowchart-v2-pointEnd" class=3D"marker flowchar=
+t-v2" viewBox=3D"0 0 10 10" refX=3D"5" refY=3D"5" markerUnits=3D"userSpaceO=
+nUse" markerWidth=3D"8" markerHeight=3D"8" orient=3D"auto"><path d=3D"M 0 0=
+ L 10 5 L 0 10 z" class=3D"arrowMarkerPath" style=3D"stroke-width: 1; strok=
+e-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-1784505152650_flo=
+wchart-v2-pointStart" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10" r=
+efX=3D"4.5" refY=3D"5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"8" mar=
+kerHeight=3D"8" orient=3D"auto"><path d=3D"M 0 5 L 10 10 L 10 0 z" class=3D=
+"arrowMarkerPath" style=3D"stroke-width: 1; stroke-dasharray: 1, 0;"></path=
+></marker><marker id=3D"mermaid-1784505152650_flowchart-v2-pointEnd-margin"=
+ class=3D"marker flowchart-v2" viewBox=3D"0 0 11.5 14" refX=3D"11.5" refY=
+=3D"7" markerUnits=3D"userSpaceOnUse" markerWidth=3D"10.5" markerHeight=3D"=
+14" orient=3D"auto"><path d=3D"M 0 0 L 11.5 7 L 0 14 z" class=3D"arrowMarke=
+rPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><=
+marker id=3D"mermaid-1784505152650_flowchart-v2-pointStart-margin" class=3D=
+"marker flowchart-v2" viewBox=3D"0 0 11.5 14" refX=3D"1" refY=3D"7" markerU=
+nits=3D"userSpaceOnUse" markerWidth=3D"11.5" markerHeight=3D"14" orient=3D"=
+auto"><polygon points=3D"0,7 11.5,14 11.5,0" class=3D"arrowMarkerPath" styl=
+e=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker i=
+d=3D"mermaid-1784505152650_flowchart-v2-circleEnd" class=3D"marker flowchar=
+t-v2" viewBox=3D"0 0 10 10" refX=3D"11" refY=3D"5" markerUnits=3D"userSpace=
+OnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><circle cx=3D=
+"5" cy=3D"5" r=3D"5" class=3D"arrowMarkerPath" style=3D"stroke-width: 1; st=
+roke-dasharray: 1, 0;"></circle></marker><marker id=3D"mermaid-178450515265=
+0_flowchart-v2-circleStart" class=3D"marker flowchart-v2" viewBox=3D"0 0 10=
+ 10" refX=3D"-1" refY=3D"5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"1=
+1" markerHeight=3D"11" orient=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" cl=
+ass=3D"arrowMarkerPath" style=3D"stroke-width: 1; stroke-dasharray: 1, 0;">=
+</circle></marker><marker id=3D"mermaid-1784505152650_flowchart-v2-circleEn=
+d-margin" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10" refY=3D"5" re=
+fX=3D"12.25" markerUnits=3D"userSpaceOnUse" markerWidth=3D"14" markerHeight=
+=3D"14" orient=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" class=3D"arrowMar=
+kerPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></circle></mark=
+er><marker id=3D"mermaid-1784505152650_flowchart-v2-circleStart-margin" cla=
+ss=3D"marker flowchart-v2" viewBox=3D"0 0 10 10" refX=3D"-2" refY=3D"5" mar=
+kerUnits=3D"userSpaceOnUse" markerWidth=3D"14" markerHeight=3D"14" orient=
+=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" class=3D"arrowMarkerPath" style=
+=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id=
+=3D"mermaid-1784505152650_flowchart-v2-crossEnd" class=3D"marker cross flow=
+chart-v2" viewBox=3D"0 0 11 11" refX=3D"12" refY=3D"5.2" markerUnits=3D"use=
+rSpaceOnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><path d=
+=3D"M 1,1 l 9,9 M 10,1 l -9,9" class=3D"arrowMarkerPath" style=3D"stroke-wi=
+dth: 2; stroke-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-1784=
+505152650_flowchart-v2-crossStart" class=3D"marker cross flowchart-v2" view=
+Box=3D"0 0 11 11" refX=3D"-1" refY=3D"5.2" markerUnits=3D"userSpaceOnUse" m=
+arkerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><path d=3D"M 1,1 l 9,=
+9 M 10,1 l -9,9" class=3D"arrowMarkerPath" style=3D"stroke-width: 2; stroke=
+-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-1784505152650_flow=
+chart-v2-crossEnd-margin" class=3D"marker cross flowchart-v2" viewBox=3D"0 =
+0 15 15" refX=3D"17.7" refY=3D"7.5" markerUnits=3D"userSpaceOnUse" markerWi=
+dth=3D"12" markerHeight=3D"12" orient=3D"auto"><path d=3D"M 1,1 L 14,14 M 1=
+,14 L 14,1" class=3D"arrowMarkerPath" style=3D"stroke-width: 2.5;"></path><=
+/marker><marker id=3D"mermaid-1784505152650_flowchart-v2-crossStart-margin"=
+ class=3D"marker cross flowchart-v2" viewBox=3D"0 0 15 15" refX=3D"-3.5" re=
+fY=3D"7.5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"12" markerHeight=
+=3D"12" orient=3D"auto"><path d=3D"M 1,1 L 14,14 M 1,14 L 14,1" class=3D"ar=
+rowMarkerPath" style=3D"stroke-width: 2.5; stroke-dasharray: 1, 0;"></path>=
+</marker><g class=3D"root"><g class=3D"clusters"><g class=3D"cluster " id=
+=3D"mermaid-1784505152650-ST" data-look=3D"classic"><rect style=3D"" x=3D"3=
+7.625" y=3D"112" width=3D"763.96484375" height=3D"128"></rect><g class=3D"c=
+luster-label " transform=3D"translate(281.927734375, 112)"><foreignObject w=
+idth=3D"275.359375" height=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtm=
+l" style=3D"display: table-cell; white-space: nowrap; line-height: 1.5;"><s=
+pan class=3D"nodeLabel "><p>InstanceStore =E2=80=94 524 lines, 25 methods</=
+p></span></div></foreignObject></g></g></g><g class=3D"edgePaths"><path d=
+=3D"M388.051,203L388.051,209.167C388.051,215.333,388.051,227.667,388.051,23=
+8C388.051,248.333,388.051,256.667,388.051,264.333C388.051,272,388.051,279,3=
+88.051,282.5L388.051,286" id=3D"mermaid-1784505152650-L_EM_SSE_0" class=3D"=
+ edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern=
+-solid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data=
+-id=3D"L_EM_SSE_0" data-points=3D"W3sieCI6Mzg4LjA1MDc4MTI1LCJ5IjoyMDN9LHsie=
+CI6Mzg4LjA1MDc4MTI1LCJ5IjoyNDB9LHsieCI6Mzg4LjA1MDc4MTI1LCJ5IjoyNjV9LHsieCI6=
+Mzg4LjA1MDc4MTI1LCJ5IjoyOTB9XQ=3D=3D" data-look=3D"classic" marker-end=3D"u=
+rl(#mermaid-1784505152650_flowchart-v2-pointEnd)"></path><path d=3D"M640.88=
+7,215L640.887,219.167C640.887,223.333,640.887,231.667,640.887,240C640.887,2=
+48.333,640.887,256.667,640.887,264.333C640.887,272,640.887,279,640.887,282.=
+5L640.887,286" id=3D"mermaid-1784505152650-L_SPAN_OT_0" class=3D" edge-thic=
+kness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flo=
+wchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_S=
+PAN_OT_0" data-points=3D"W3sieCI6NjQwLjg4NjcxODc1LCJ5IjoyMTV9LHsieCI6NjQwLj=
+g4NjcxODc1LCJ5IjoyNDB9LHsieCI6NjQwLjg4NjcxODc1LCJ5IjoyNjV9LHsieCI6NjQwLjg4N=
+jcxODc1LCJ5IjoyOTB9XQ=3D=3D" data-look=3D"classic" marker-end=3D"url(#merma=
+id-1784505152650_flowchart-v2-pointEnd)"></path><path d=3D"M77.625,62L77.62=
+5,66.167C77.625,70.333,77.625,78.667,77.625,86.333C77.625,94,77.625,101,77.=
+625,104.5L77.625,108" id=3D"mermaid-1784505152650-L_EH_ST_0" class=3D" edge=
+-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-sol=
+id flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=
+=3D"L_EH_ST_0" data-points=3D"W3sieCI6NzcuNjI1LCJ5Ijo2Mn0seyJ4Ijo3Ny42MjUsI=
+nkiOjg3fSx7IngiOjc3LjYyNSwieSI6MTEyfSx7IngiOjE0NC41NDc0ODUzNTE1NjI1LCJ5Ijox=
+NDl9XQ=3D=3D" data-look=3D"classic" marker-end=3D"url(#mermaid-178450515265=
+0_flowchart-v2-pointEnd)"></path><path d=3D"M246.605,62L246.605,66.167C246.=
+605,70.333,246.605,78.667,246.605,86.333C246.605,94,246.605,101,246.605,104=
+.5L246.605,108" id=3D"mermaid-1784505152650-L_IB_ST_0" class=3D" edge-thick=
+ness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flo=
+wchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_I=
+B_ST_0" data-points=3D"W3sieCI6MjQ2LjYwNTQ2ODc1LCJ5Ijo2Mn0seyJ4IjoyNDYuNjA1=
+NDY4NzUsInkiOjg3fSx7IngiOjI0Ni42MDU0Njg3NSwieSI6MTEyfSx7IngiOjIxNS44MzYxMjA=
+2MDU0Njg3NSwieSI6MTQ5fV0=3D" data-look=3D"classic" marker-end=3D"url(#merma=
+id-1784505152650_flowchart-v2-pointEnd)"></path><path d=3D"M576.666,62L576.=
+666,66.167C576.666,70.333,576.666,78.667,576.666,86.333C576.666,94,576.666,=
+101,576.666,104.5L576.666,108" id=3D"mermaid-1784505152650-L_LD_ST_0" class=
+=3D" edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pa=
+ttern-solid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge"=
+ data-id=3D"L_LD_ST_0" data-points=3D"W3sieCI6NTc2LjY2NjAxNTYyNSwieSI6NjJ9L=
+HsieCI6NTc2LjY2NjAxNTYyNSwieSI6ODd9LHsieCI6NTc2LjY2NjAxNTYyNSwieSI6MTEyfSx7=
+IngiOjI2MC45MTc5Njg3NSwieSI6MTY0LjcyMzA5MDQ4NTY3ODN9XQ=3D=3D" data-look=3D"=
+classic" marker-end=3D"url(#mermaid-1784505152650_flowchart-v2-pointEnd)"><=
+/path></g><g class=3D"edgeLabels"><g class=3D"edgeLabel"><g class=3D"label"=
+ data-id=3D"L_EM_SSE_0" transform=3D"translate(0, 0)"><foreignObject width=
+=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"la=
+belBkg" style=3D"display: table-cell; white-space: nowrap; line-height: 1.5=
+; max-width: 200px; text-align: center;"><span class=3D"edgeLabel "></span>=
+</div></foreignObject></g></g><g class=3D"edgeLabel"><g class=3D"label" dat=
+a-id=3D"L_SPAN_OT_0" transform=3D"translate(0, 0)"><foreignObject width=3D"=
+0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelB=
+kg" style=3D"display: table-cell; white-space: nowrap; line-height: 1.5; ma=
+x-width: 200px; text-align: center;"><span class=3D"edgeLabel "></span></di=
+v></foreignObject></g></g><g class=3D"edgeLabel"><g class=3D"label" data-id=
+=3D"L_EH_ST_0" transform=3D"translate(0, 0)"><foreignObject width=3D"0" hei=
+ght=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" st=
+yle=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-widt=
+h: 200px; text-align: center;"><span class=3D"edgeLabel "></span></div></fo=
+reignObject></g></g><g class=3D"edgeLabel"><g class=3D"label" data-id=3D"L_=
+IB_ST_0" transform=3D"translate(0, 0)"><foreignObject width=3D"0" height=3D=
+"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D=
+"display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200=
+px; text-align: center;"><span class=3D"edgeLabel "></span></div></foreignO=
+bject></g></g><g class=3D"edgeLabel"><g class=3D"label" data-id=3D"L_LD_ST_=
+0" transform=3D"translate(0, 0)"><foreignObject width=3D"0" height=3D"0"><d=
+iv xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D"displ=
+ay: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; te=
+xt-align: center;"><span class=3D"edgeLabel "></span></div></foreignObject>=
+</g></g></g><g class=3D"nodes"><g class=3D"node default" id=3D"mermaid-1784=
+505152650-flowchart-EH-0" data-look=3D"classic" transform=3D"translate(77.6=
+25, 35)"><rect class=3D"basic label-container" style=3D"" x=3D"-69.625" y=
+=3D"-27" width=3D"139.25" height=3D"54"></rect><g class=3D"label" style=3D"=
+" transform=3D"translate(-39.625, -12)"><rect></rect><foreignObject width=
+=3D"79.25" height=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=
+=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-width: =
+200px; text-align: center;"><span class=3D"nodeLabel "><p>EngineHost</p></s=
+pan></div></foreignObject></g></g><g class=3D"node default  " id=3D"mermaid=
+-1784505152650-flowchart-IB-2" data-look=3D"classic" transform=3D"translate=
+(246.60546875, 35)"><rect class=3D"basic label-container" style=3D"" x=3D"-=
+49.35546875" y=3D"-27" width=3D"98.7109375" height=3D"54"></rect><g class=
+=3D"label" style=3D"" transform=3D"translate(-19.35546875, -12)"><rect></re=
+ct><foreignObject width=3D"38.7109375" height=3D"24"><div xmlns=3D"http://w=
+ww.w3.org/1999/xhtml" style=3D"display: table-cell; white-space: nowrap; li=
+ne-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"nodeL=
+abel "><p>Inbox</p></span></div></foreignObject></g></g><g class=3D"node de=
+fault  " id=3D"mermaid-1784505152650-flowchart-LD-4" data-look=3D"classic" =
+transform=3D"translate(576.666015625, 35)"><rect class=3D"basic label-conta=
+iner" style=3D"" x=3D"-79.00390625" y=3D"-27" width=3D"158.0078125" height=
+=3D"54"></rect><g class=3D"label" style=3D"" transform=3D"translate(-49.003=
+90625, -12)"><rect></rect><foreignObject width=3D"98.0078125" height=3D"24"=
+><div xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: table-cell; =
+white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center=
+;"><span class=3D"nodeLabel "><p>failure ladder</p></span></div></foreignOb=
+ject></g></g><g class=3D"node default  " id=3D"mermaid-1784505152650-flowch=
+art-SQL-6" data-look=3D"classic" transform=3D"translate(193.3828125, 176)">=
+<rect class=3D"basic label-container" style=3D"" x=3D"-67.53515625" y=3D"-2=
+7" width=3D"135.0703125" height=3D"54"></rect><g class=3D"label" style=3D""=
+ transform=3D"translate(-37.53515625, -12)"><rect></rect><foreignObject wid=
+th=3D"75.0703125" height=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml"=
+ style=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-w=
+idth: 200px; text-align: center;"><span class=3D"nodeLabel "><p>SQL writes<=
+/p></span></div></foreignObject></g></g><g class=3D"node default leak " id=
+=3D"mermaid-1784505152650-flowchart-EM-7" data-look=3D"classic" transform=
+=3D"translate(388.05078125, 176)"><rect class=3D"basic label-container" sty=
+le=3D"stroke:#dc2626 !important;stroke-width:2px !important" x=3D"-77.13281=
+25" y=3D"-27" width=3D"154.265625" height=3D"54"></rect><g class=3D"label" =
+style=3D"" transform=3D"translate(-47.1328125, -12)"><rect></rect><foreignO=
+bject width=3D"94.265625" height=3D"24"><div xmlns=3D"http://www.w3.org/199=
+9/xhtml" style=3D"display: table-cell; white-space: nowrap; line-height: 1.=
+5; max-width: 200px; text-align: center;"><span class=3D"nodeLabel "><p>Eve=
+ntEmitter</p></span></div></foreignObject></g></g><g class=3D"node default =
+leak" id=3D"mermaid-1784505152650-flowchart-SPAN-8" data-look=3D"classic" t=
+ransform=3D"translate(640.88671875, 176)"><rect class=3D"basic label-contai=
+ner" style=3D"stroke:#dc2626 !important;stroke-width:2px !important" x=3D"-=
+125.703125" y=3D"-39" width=3D"251.40625" height=3D"78"></rect><g class=3D"=
+label" style=3D"" transform=3D"translate(-95.703125, -24)"><rect></rect><fo=
+reignObject width=3D"191.40625" height=3D"48"><div xmlns=3D"http://www.w3.o=
+rg/1999/xhtml" style=3D"display: table-cell; white-space: nowrap; line-heig=
+ht: 1.5; max-width: 200px; text-align: center;"><span class=3D"nodeLabel ">=
+<p>span payload assembly<br>re-SELECT row + all events</p></span></div></fo=
+reignObject></g></g><g class=3D"node default leak " id=3D"mermaid-178450515=
+2650-flowchart-SSE-10" data-look=3D"classic" transform=3D"translate(388.050=
+78125, 317)"><rect class=3D"basic label-container" style=3D"stroke:#dc2626 =
+!important;stroke-width:2px !important" x=3D"-63.69921875" y=3D"-27" width=
+=3D"127.3984375" height=3D"54"></rect><g class=3D"label" style=3D"" transfo=
+rm=3D"translate(-33.69921875, -12)"><rect></rect><foreignObject width=3D"67=
+.3984375" height=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=
+=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-width: =
+200px; text-align: center;"><span class=3D"nodeLabel "><p>SSE route</p></sp=
+an></div></foreignObject></g></g><g class=3D"node default leak" id=3D"merma=
+id-1784505152650-flowchart-OT-12" data-look=3D"classic" transform=3D"transl=
+ate(640.88671875, 317)"><rect class=3D"basic label-container" style=3D"stro=
+ke:#dc2626 !important;stroke-width:2px !important" x=3D"-81.25" y=3D"-27" w=
+idth=3D"162.5" height=3D"54"></rect><g class=3D"label" style=3D"" transform=
+=3D"translate(-51.25, -12)"><rect></rect><foreignObject width=3D"102.5" hei=
+ght=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: ta=
+ble-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-ali=
+gn: center;"><span class=3D"nodeLabel "><p>OtelTelemetry</p></span></div></=
+foreignObject></g></g></g></g></g><defs><filter id=3D"mermaid-1784505152650=
+-drop-shadow" height=3D"130%" width=3D"130%"><feDropShadow dx=3D"4" dy=3D"4=
+" stdDeviation=3D"0" flood-opacity=3D"0.06" flood-color=3D"#000000"></feDro=
+pShadow></filter></defs><defs><filter id=3D"mermaid-1784505152650-drop-shad=
+ow-small" height=3D"150%" width=3D"150%"><feDropShadow dx=3D"2" dy=3D"2" st=
+dDeviation=3D"0" flood-opacity=3D"0.06" flood-color=3D"#000000"></feDropSha=
+dow></filter></defs><linearGradient id=3D"mermaid-1784505152650-gradient" g=
+radientUnits=3D"objectBoundingBox" x1=3D"0%" y1=3D"0%" x2=3D"100%" y2=3D"0%=
+"><stop offset=3D"0%" stop-color=3D"hsl(0, 0%, 83.3333333333%)" stop-opacit=
+y=3D"1"></stop><stop offset=3D"100%" stop-color=3D"hsl(0, 0%, 88.9215686275=
+%)" stop-opacity=3D"1"></stop></linearGradient></svg></pre>
+            </div>
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4 f=
+lex flex-col">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">After =E2=80=94 one seam, three adapters</p>
+              <div class=3D"flex-1 flex flex-col justify-center gap-3">
+                <div class=3D"deep-box rounded-lg text-white p-4">
+                  <p class=3D"text-xs uppercase tracking-wider border-b bor=
+der-slate-600 pb-2 mb-2">events =E2=80=94 append(event) =C2=B7 subscribe(fi=
+lter)</p>
+                  <div class=3D"faded text-xs space-y-1 font-mono">
+                    <p>terminal-transition dedup</p>
+                    <p>span payload assembly</p>
+                    <p>fan-out, listener lifecycle</p>
+                  </div>
+                </div>
+                <div class=3D"text-center text-slate-400 text-xs">=E2=80=94=
+ seam =E2=80=94</div>
+                <div class=3D"grid grid-cols-3 gap-2 text-center text-xs">
+                  <div class=3D"border seam border-slate-400 rounded p-2">S=
+QLite persistence<br><span class=3D"text-slate-400">(InstanceStore)</span><=
+/div>
+                  <div class=3D"border seam border-slate-400 rounded p-2">S=
+SE stream</div>
+                  <div class=3D"border seam border-slate-400 rounded p-2">O=
+Tel spans + metrics</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p><span class=3D"font-semibold">Problem.</span> The design spec =
+(=C2=A73) defines an <span class=3D"font-mono text-sm">events</span> module=
+ ("single write path, SSE fan-out, OTel emission") that was never built; it=
+s jobs landed inside <span class=3D"font-mono text-sm">InstanceStore</span>=
+. A status <span class=3D"font-mono text-sm">UPDATE</span> now re-reads the=
+ whole row plus the full event list to assemble a span payload (store.ts:22=
+0-239), the persistence module holds live SSE listener state (store.ts:100,=
+ 257), and <span class=3D"font-mono text-sm">EngineHost</span>, which owns =
+the run lifecycle, holds no telemetry reference at all.</p>
+          <p><span class=3D"font-semibold">Solution.</span> Carve the modul=
+e out: append + subscribe as its interface, with span assembly and fan-out =
+as implementation. InstanceStore becomes a pure persistence adapter behind =
+it; SSE and OTel become two more adapters at the same seam.</p>
+          <ul class=3D"list-disc list-inside text-sm space-y-1 text-slate-7=
+00">
+            <li>locality: span bugs concentrate in one module</li>
+            <li>leverage: one subscribe interface, N consumers</li>
+            <li>InstanceStore interface shrinks =E2=80=94 emitter and telem=
+etry option gone</li>
+            <li>tests assert spans by subscribing, not by faking telemetry =
+inside the store</li>
+            <li>three adapters justify the seam =E2=80=94 it's real, not hy=
+pothetical</li>
+          </ul>
+        </article>
+
+        <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D CANDIDATE 2 =3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D -->
+        <article id=3D"c2" class=3D"bg-white rounded-xl border border-slate=
+-200 p-8 space-y-5 shadow-sm">
+          <div class=3D"flex items-start justify-between gap-4">
+            <h2 class=3D"font-serif text-2xl">2 =C2=B7 One composition root=
+, ten deleted object graphs</h2>
+            <div class=3D"flex gap-2 shrink-0">
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-emerald-100 text-emerald-800">Strong</span>
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-100 text-slate-600">in-process</span>
+            </div>
+          </div>
+          <p class=3D"font-mono text-sm text-slate-500">packages/server/src=
+/daemon.ts =C2=B7 api/server.ts (ApiDeps) =C2=B7 packages/server/test/*.tes=
+t.ts =C3=9710</p>
+
+          <div class=3D"grid md:grid-cols-2 gap-4">
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">Before =E2=80=94 the same wiring, hand-copied</p>
+              <div class=3D"grid grid-cols-3 gap-1.5">
+                <!-- 9 clone cards + daemon -->
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">daemon.ts<br><span class=3D"text-red-6=
+00">let inbox!<br>onUserTaskWait=E2=80=A6<br>new EngineHost=E2=80=A6</span>=
+</div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">api.test<br><span class=3D"text-red-60=
+0">let inbox!<br>onUserTaskWait=E2=80=A6<br>notify: ()=3D&gt;{}</span></div=
+>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">api-reads.test<br><span class=3D"text-=
+red-600">let inbox!<br>onUserTaskWait=E2=80=A6<br>notify: ()=3D&gt;{}</span=
+></div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">metrics.test<br><span class=3D"text-re=
+d-600">let inbox!<br>onUserTaskWait=E2=80=A6<br>notify: ()=3D&gt;{}</span><=
+/div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">definitions.test<br><span class=3D"tex=
+t-red-600">let inbox!<br>onUserTaskWait=E2=80=A6<br>notify: ()=3D&gt;{}</sp=
+an></div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">grill-api.test<br><span class=3D"text-=
+red-600">let inbox!<br>onUserTaskWait=E2=80=A6<br>notify: ()=3D&gt;{}</span=
+></div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">events-vocab.test<br><span class=3D"te=
+xt-red-600">let inbox!<br>onUserTaskWait=E2=80=A6</span></div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">dry-run-e2e.test<br><span class=3D"tex=
+t-red-600">let inbox!<br>onUserTaskWait=E2=80=A6</span></div>
+                <div class=3D"border border-red-300 bg-red-50 rounded p-1.5=
+ text-[9px] font-mono leading-tight">+ user-tasks, static,<br>timeline=E2=
+=80=A6</div>
+              </div>
+              <p class=3D"text-[11px] text-red-600 mt-2 font-medium">the ci=
+rcular late-bind idiom appears in 10 files; the notifier stub in 9</p>
+            </div>
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4 f=
+lex flex-col">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">After =E2=80=94 one deep module owns the graph</p>
+              <div class=3D"flex-1 flex flex-col justify-center gap-3">
+                <div class=3D"flex flex-wrap gap-1.5 justify-center text-[1=
+0px]">
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">daemon.ts</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">api.test</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">metrics.test</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">=E2=80=A6=C3=9710</span>
+                </div>
+                <div class=3D"text-center text-slate-400 text-xs">=E2=86=93=
+ one call each</div>
+                <div class=3D"deep-box rounded-lg text-white p-4">
+                  <p class=3D"text-xs uppercase tracking-wider border-b bor=
+der-slate-600 pb-2 mb-2">createDaemon({ dataDir, runners?, notifier?, telem=
+etry?, queryFn? })</p>
+                  <div class=3D"faded text-xs space-y-1 font-mono">
+                    <p>store =C2=B7 host =C2=B7 inbox =C2=B7 grill =C2=B7 d=
+efinitions =C2=B7 logRing =C2=B7 api</p>
+                    <p>the inbox =E2=86=94 host circular bind, resolved onc=
+e</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p><span class=3D"font-semibold">Problem.</span> There is no comp=
+osition-root seam. daemon.ts wires ten objects, including a circular <span =
+class=3D"font-mono text-sm">let inbox!</span> late-bind (daemon.ts:26-33), =
+and seven to ten test files re-implement that graph by hand. A new required=
+ constructor dependency is a ten-site edit, and every test encodes the daem=
+on's wiring knowledge.</p>
+          <p><span class=3D"font-semibold">Solution.</span> A <span class=
+=3D"font-mono text-sm">createDaemon(opts)</span> module: small interface (d=
+ata dir plus injectable runners, notifier, telemetry, grill queryFn), retur=
+ns the wired graph. daemon.ts becomes a three-line caller; tests override o=
+nly the adapter they care about.</p>
+          <ul class=3D"list-disc list-inside text-sm space-y-1 text-slate-7=
+00">
+            <li>leverage: one implementation, ten call sites repaid</li>
+            <li>locality: wiring changes land in one file</li>
+            <li>deletion test: remove it and the graph knowledge reappears =
+in every test</li>
+            <li>de-risks every other candidate here =E2=80=94 they all edit=
+ this graph</li>
+          </ul>
+        </article>
+
+        <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D CANDIDATE 3 =3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D -->
+        <article id=3D"c3" class=3D"bg-white rounded-xl border border-slate=
+-200 p-8 space-y-5 shadow-sm">
+          <div class=3D"flex items-start justify-between gap-4">
+            <h2 class=3D"font-serif text-2xl">3 =C2=B7 Give the failure lad=
+der one home</h2>
+            <div class=3D"flex gap-2 shrink-0">
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-amber-100 text-amber-800">Worth exploring</span>
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-100 text-slate-600">in-process</span>
+            </div>
+          </div>
+          <p class=3D"font-mono text-sm text-slate-500">engine-host/dispatc=
+h.ts =C2=B7 engine-host/failure.ts =C2=B7 engine-host/engine-host.ts:148-18=
+6 =C2=B7 index.ts</p>
+
+          <div class=3D"grid md:grid-cols-2 gap-4">
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">Before =E2=80=94 two modules mutate one map</p>
+              <pre class=3D"mermaid" data-processed=3D"true"><svg id=3D"mer=
+maid-1784505152760" width=3D"100%" xmlns=3D"http://www.w3.org/2000/svg" xml=
+ns:xlink=3D"http://www.w3.org/1999/xlink" class=3D"flowchart" style=3D"max-=
+width: 584.62109375px;" viewBox=3D"0 0 584.62109375 437.55389404296875" rol=
+e=3D"graphics-document document" aria-roledescription=3D"flowchart-v2"><sty=
+le>#mermaid-1784505152760{font-family:"trebuchet ms",verdana,arial,sans-ser=
+if;font-size:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke=
+-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#mermaid-178450515=
+2760 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:=
+900;animation:dash 50s linear infinite;stroke-linecap:round;}#mermaid-17845=
+05152760 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoff=
+set:900;animation:dash 20s linear infinite;stroke-linecap:round;}#mermaid-1=
+784505152760 .error-icon{fill:#552222;}#mermaid-1784505152760 .error-text{f=
+ill:#552222;stroke:#552222;}#mermaid-1784505152760 .edge-thickness-normal{s=
+troke-width:1px;}#mermaid-1784505152760 .edge-thickness-thick{stroke-width:=
+3.5px;}#mermaid-1784505152760 .edge-pattern-solid{stroke-dasharray:0;}#merm=
+aid-1784505152760 .edge-thickness-invisible{stroke-width:0;fill:none;}#merm=
+aid-1784505152760 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-1784505=
+152760 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-1784505152760 .mar=
+ker{fill:#666;stroke:#666;}#mermaid-1784505152760 .marker.cross{stroke:#666=
+;}#mermaid-1784505152760 svg{font-family:"trebuchet ms",verdana,arial,sans-=
+serif;font-size:16px;}#mermaid-1784505152760 p{margin:0;}#mermaid-178450515=
+2760 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#0000=
+00;}#mermaid-1784505152760 .cluster-label text{fill:#333;}#mermaid-17845051=
+52760 .cluster-label span{color:#333;}#mermaid-1784505152760 .cluster-label=
+ span p{background-color:transparent;}#mermaid-1784505152760 .label text,#m=
+ermaid-1784505152760 span{fill:#000000;color:#000000;}#mermaid-178450515276=
+0 .node rect,#mermaid-1784505152760 .node circle,#mermaid-1784505152760 .no=
+de ellipse,#mermaid-1784505152760 .node polygon,#mermaid-1784505152760 .nod=
+e path{fill:#eee;stroke:#999;stroke-width:1px;}#mermaid-1784505152760 .roug=
+h-node .label text,#mermaid-1784505152760 .node .label text,#mermaid-178450=
+5152760 .image-shape .label,#mermaid-1784505152760 .icon-shape .label{text-=
+anchor:middle;}#mermaid-1784505152760 .node .katex path{fill:#000;stroke:#0=
+00;stroke-width:1px;}#mermaid-1784505152760 .rough-node .label,#mermaid-178=
+4505152760 .node .label,#mermaid-1784505152760 .image-shape .label,#mermaid=
+-1784505152760 .icon-shape .label{text-align:center;}#mermaid-1784505152760=
+ .node.clickable{cursor:pointer;}#mermaid-1784505152760 .root .anchor path{=
+fill:#666!important;stroke-width:0;stroke:#666;}#mermaid-1784505152760 .arr=
+owheadPath{fill:#333333;}#mermaid-1784505152760 .edgePath .path{stroke:#666=
+;stroke-width:1px;}#mermaid-1784505152760 .flowchart-link{stroke:#666;fill:=
+none;}#mermaid-1784505152760 .edgeLabel{background-color:white;text-align:c=
+enter;}#mermaid-1784505152760 .edgeLabel p{background-color:white;}#mermaid=
+-1784505152760 .edgeLabel rect{opacity:0.5;background-color:white;fill:whit=
+e;}#mermaid-1784505152760 .labelBkg{background-color:rgba(255, 255, 255, 0.=
+5);}#mermaid-1784505152760 .cluster rect{fill:hsl(0, 0%, 98.9215686275%);st=
+roke:#707070;stroke-width:1px;}#mermaid-1784505152760 .cluster text{fill:#3=
+33;}#mermaid-1784505152760 .cluster span{color:#333;}#mermaid-1784505152760=
+ div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;pad=
+ding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px=
+;background:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-r=
+adius:2px;pointer-events:none;z-index:100;}#mermaid-1784505152760 .flowchar=
+tTitleText{text-anchor:middle;font-size:18px;fill:#000000;}#mermaid-1784505=
+152760 rect.text{fill:none;stroke-width:0;}#mermaid-1784505152760 .icon-sha=
+pe,#mermaid-1784505152760 .image-shape{background-color:white;text-align:ce=
+nter;}#mermaid-1784505152760 .icon-shape p,#mermaid-1784505152760 .image-sh=
+ape p{background-color:white;padding:2px;}#mermaid-1784505152760 .icon-shap=
+e .label rect,#mermaid-1784505152760 .image-shape .label rect{opacity:0.5;b=
+ackground-color:white;fill:white;}#mermaid-1784505152760 .label-icon{displa=
+y:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#mermai=
+d-1784505152760 .node .label-icon path{fill:currentColor;stroke:revert;stro=
+ke-width:revert;}#mermaid-1784505152760 .node .neo-node{stroke:#999;}#merma=
+id-1784505152760 [data-look=3D"neo"].node rect,#mermaid-1784505152760 [data=
+-look=3D"neo"].cluster rect,#mermaid-1784505152760 [data-look=3D"neo"].node=
+ polygon{stroke:url(#mermaid-1784505152760-gradient);filter:drop-shadow( 1p=
+x 2px 2px rgba(185,185,185,1));}#mermaid-1784505152760 [data-look=3D"neo"].=
+swimlane.cluster rect{filter:none;}#mermaid-1784505152760 [data-look=3D"neo=
+"].node path{stroke:url(#mermaid-1784505152760-gradient);stroke-width:1px;}=
+#mermaid-1784505152760 [data-look=3D"neo"].node .outer-path{filter:drop-sha=
+dow( 1px 2px 2px rgba(185,185,185,1));}#mermaid-1784505152760 [data-look=3D=
+"neo"].node .neo-line path{stroke:#999;filter:none;}#mermaid-1784505152760 =
+[data-look=3D"neo"].node circle{stroke:url(#mermaid-1784505152760-gradient)=
+;filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#mermaid-17845051527=
+60 [data-look=3D"neo"].node circle .state-start{fill:#000000;}#mermaid-1784=
+505152760 [data-look=3D"neo"].icon-shape .icon{fill:url(#mermaid-1784505152=
+760-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#mermai=
+d-1784505152760 [data-look=3D"neo"].icon-shape .icon-neo path{stroke:url(#m=
+ermaid-1784505152760-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185=
+,185,1));}#mermaid-1784505152760 :root{--mermaid-font-family:"trebuchet ms"=
+,verdana,arial,sans-serif;}#mermaid-1784505152760 .leak&gt;*{stroke:rgb(220=
+, 38, 38)!important;stroke-width:2px!important;}#mermaid-1784505152760 .lea=
+k span{stroke:rgb(220, 38, 38)!important;stroke-width:2px!important;}</styl=
+e><g><marker id=3D"mermaid-1784505152760_flowchart-v2-pointEnd" class=3D"ma=
+rker flowchart-v2" viewBox=3D"0 0 10 10" refX=3D"5" refY=3D"5" markerUnits=
+=3D"userSpaceOnUse" markerWidth=3D"8" markerHeight=3D"8" orient=3D"auto"><p=
+ath d=3D"M 0 0 L 10 5 L 0 10 z" class=3D"arrowMarkerPath" style=3D"stroke-w=
+idth: 1; stroke-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-178=
+4505152760_flowchart-v2-pointStart" class=3D"marker flowchart-v2" viewBox=
+=3D"0 0 10 10" refX=3D"4.5" refY=3D"5" markerUnits=3D"userSpaceOnUse" marke=
+rWidth=3D"8" markerHeight=3D"8" orient=3D"auto"><path d=3D"M 0 5 L 10 10 L =
+10 0 z" class=3D"arrowMarkerPath" style=3D"stroke-width: 1; stroke-dasharra=
+y: 1, 0;"></path></marker><marker id=3D"mermaid-1784505152760_flowchart-v2-=
+pointEnd-margin" class=3D"marker flowchart-v2" viewBox=3D"0 0 11.5 14" refX=
+=3D"11.5" refY=3D"7" markerUnits=3D"userSpaceOnUse" markerWidth=3D"10.5" ma=
+rkerHeight=3D"14" orient=3D"auto"><path d=3D"M 0 0 L 11.5 7 L 0 14 z" class=
+=3D"arrowMarkerPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></p=
+ath></marker><marker id=3D"mermaid-1784505152760_flowchart-v2-pointStart-ma=
+rgin" class=3D"marker flowchart-v2" viewBox=3D"0 0 11.5 14" refX=3D"1" refY=
+=3D"7" markerUnits=3D"userSpaceOnUse" markerWidth=3D"11.5" markerHeight=3D"=
+14" orient=3D"auto"><polygon points=3D"0,7 11.5,14 11.5,0" class=3D"arrowMa=
+rkerPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></ma=
+rker><marker id=3D"mermaid-1784505152760_flowchart-v2-circleEnd" class=3D"m=
+arker flowchart-v2" viewBox=3D"0 0 10 10" refX=3D"11" refY=3D"5" markerUnit=
+s=3D"userSpaceOnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"=
+><circle cx=3D"5" cy=3D"5" r=3D"5" class=3D"arrowMarkerPath" style=3D"strok=
+e-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id=3D"mermai=
+d-1784505152760_flowchart-v2-circleStart" class=3D"marker flowchart-v2" vie=
+wBox=3D"0 0 10 10" refX=3D"-1" refY=3D"5" markerUnits=3D"userSpaceOnUse" ma=
+rkerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><circle cx=3D"5" cy=3D=
+"5" r=3D"5" class=3D"arrowMarkerPath" style=3D"stroke-width: 1; stroke-dash=
+array: 1, 0;"></circle></marker><marker id=3D"mermaid-1784505152760_flowcha=
+rt-v2-circleEnd-margin" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10"=
+ refY=3D"5" refX=3D"12.25" markerUnits=3D"userSpaceOnUse" markerWidth=3D"14=
+" markerHeight=3D"14" orient=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" cla=
+ss=3D"arrowMarkerPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"><=
+/circle></marker><marker id=3D"mermaid-1784505152760_flowchart-v2-circleSta=
+rt-margin" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10" refX=3D"-2" =
+refY=3D"5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"14" markerHeight=
+=3D"14" orient=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" class=3D"arrowMar=
+kerPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></circle></mark=
+er><marker id=3D"mermaid-1784505152760_flowchart-v2-crossEnd" class=3D"mark=
+er cross flowchart-v2" viewBox=3D"0 0 11 11" refX=3D"12" refY=3D"5.2" marke=
+rUnits=3D"userSpaceOnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"=
+auto"><path d=3D"M 1,1 l 9,9 M 10,1 l -9,9" class=3D"arrowMarkerPath" style=
+=3D"stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id=3D=
+"mermaid-1784505152760_flowchart-v2-crossStart" class=3D"marker cross flowc=
+hart-v2" viewBox=3D"0 0 11 11" refX=3D"-1" refY=3D"5.2" markerUnits=3D"user=
+SpaceOnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><path d=
+=3D"M 1,1 l 9,9 M 10,1 l -9,9" class=3D"arrowMarkerPath" style=3D"stroke-wi=
+dth: 2; stroke-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-1784=
+505152760_flowchart-v2-crossEnd-margin" class=3D"marker cross flowchart-v2"=
+ viewBox=3D"0 0 15 15" refX=3D"17.7" refY=3D"7.5" markerUnits=3D"userSpaceO=
+nUse" markerWidth=3D"12" markerHeight=3D"12" orient=3D"auto"><path d=3D"M 1=
+,1 L 14,14 M 1,14 L 14,1" class=3D"arrowMarkerPath" style=3D"stroke-width: =
+2.5;"></path></marker><marker id=3D"mermaid-1784505152760_flowchart-v2-cros=
+sStart-margin" class=3D"marker cross flowchart-v2" viewBox=3D"0 0 15 15" re=
+fX=3D"-3.5" refY=3D"7.5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"12" =
+markerHeight=3D"12" orient=3D"auto"><path d=3D"M 1,1 L 14,14 M 1,14 L 14,1"=
+ class=3D"arrowMarkerPath" style=3D"stroke-width: 2.5; stroke-dasharray: 1,=
+ 0;"></path></marker><g class=3D"root"><g class=3D"clusters"></g><g class=
+=3D"edgePaths"><path d=3D"M136.469,86L136.469,92.167C136.469,98.333,136.469=
+,110.667,139.604,122.419C142.739,134.171,149.008,145.341,152.143,150.927L15=
+5.278,156.512" id=3D"mermaid-1784505152760-L_D_F_0" class=3D" edge-thicknes=
+s-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowch=
+art-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_D_F_=
+0" data-points=3D"W3sieCI6MTM2LjQ2ODc1LCJ5Ijo4Nn0seyJ4IjoxMzYuNDY4NzUsInkiO=
+jEyM30seyJ4IjoxNTcuMjM2MDgzOTg0Mzc1LCJ5IjoxNjB9XQ=3D=3D" data-look=3D"class=
+ic" marker-end=3D"url(#mermaid-1784505152760_flowchart-v2-pointEnd)"></path=
+><path d=3D"M185.861,262L185.861,270.167C185.861,278.333,185.861,294.667,19=
+8.834,313.236C211.807,331.805,237.754,352.609,250.727,363.011L263.7,373.414=
+" id=3D"mermaid-1784505152760-L_F_H_0" class=3D" edge-thickness-normal edge=
+-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" sty=
+le=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_F_H_0" data-point=
+s=3D"W3sieCI6MTg1Ljg2MTMyODEyNSwieSI6MjYyfSx7IngiOjE4NS44NjEzMjgxMjUsInkiOj=
+MxMX0seyJ4IjoyNjYuODIwMzEyNSwieSI6Mzc1LjkxNTgxNTAwODc5MTV9XQ=3D=3D" data-lo=
+ok=3D"classic" marker-end=3D"url(#mermaid-1784505152760_flowchart-v2-pointE=
+nd)"></path><path d=3D"M469.727,86L473.735,92.167C477.743,98.333,485.758,11=
+0.667,489.766,131.5C493.773,152.333,493.773,181.667,493.773,213C493.773,244=
+.333,493.773,277.667,470.876,304.759C447.979,331.852,402.185,352.704,379.28=
+8,363.13L356.39,373.556" id=3D"mermaid-1784505152760-L_E_H_0" class=3D" edg=
+e-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-so=
+lid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=
+=3D"L_E_H_0" data-points=3D"W3sieCI6NDY5LjcyNzA1MDc4MTI1LCJ5Ijo4Nn0seyJ4Ijo=
+0OTMuNzczNDM3NSwieSI6MTIzfSx7IngiOjQ5My43NzM0Mzc1LCJ5IjoyMTF9LHsieCI6NDkzLj=
+c3MzQzNzUsInkiOjMxMX0seyJ4IjozNTIuNzUsInkiOjM3NS4yMTM0MDU1OTIzNjZ9XQ=3D=3D"=
+ data-look=3D"classic" marker-end=3D"url(#mermaid-1784505152760_flowchart-v=
+2-pointEnd)"></path><path d=3D"M380.788,86L370.733,92.167C360.678,98.333,34=
+0.567,110.667,321.638,122.635C302.709,134.604,284.961,146.207,276.087,152.0=
+09L267.214,157.811" id=3D"mermaid-1784505152760-L_E_F_0" class=3D" edge-thi=
+ckness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid =
+flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"=
+L_E_F_0" data-points=3D"W3sieCI6MzgwLjc4ODM2ODYyNjY0NDc0LCJ5Ijo4Nn0seyJ4Ijo=
+zMjAuNDU3MDMxMjUsInkiOjEyM30seyJ4IjoyNjMuODY1NjU2MDcyNDQzMiwieSI6MTYwfV0=3D=
+" data-look=3D"classic" marker-end=3D"url(#mermaid-1784505152760_flowchart-=
+v2-pointEnd)"></path></g><g class=3D"edgeLabels"><g class=3D"edgeLabel"><g =
+class=3D"label" data-id=3D"L_D_F_0" transform=3D"translate(0, 0)"><foreignO=
+bject width=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" =
+class=3D"labelBkg" style=3D"display: table-cell; white-space: nowrap; line-=
+height: 1.5; max-width: 200px; text-align: center;"><span class=3D"edgeLabe=
+l "></span></div></foreignObject></g></g><g class=3D"edgeLabel" transform=
+=3D"translate(185.861328125, 311)"><g class=3D"label" data-id=3D"L_F_H_0" t=
+ransform=3D"translate(-85.109375, -24)"><foreignObject width=3D"170.21875" =
+height=3D"48"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg=
+" style=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-=
+width: 200px; text-align: center;"><span class=3D"edgeLabel "><p>set / dele=
+te<br>key =3D instanceId:nodeId</p></span></div></foreignObject></g></g><g =
+class=3D"edgeLabel" transform=3D"translate(493.7734375, 211)"><g class=3D"l=
+abel" data-id=3D"L_E_H_0" transform=3D"translate(-82.84765625, -24)"><forei=
+gnObject width=3D"165.6953125" height=3D"48"><div xmlns=3D"http://www.w3.or=
+g/1999/xhtml" class=3D"labelBkg" style=3D"display: table-cell; white-space:=
+ nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span cla=
+ss=3D"edgeLabel "><p>get / delete<br>same string convention</p></span></div=
+></foreignObject></g></g><g class=3D"edgeLabel" transform=3D"translate(320.=
+45703125, 123)"><g class=3D"label" data-id=3D"L_E_F_0" transform=3D"transla=
+te(-78.78515625, -12)"><foreignObject width=3D"157.5703125" height=3D"24"><=
+div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D"disp=
+lay: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; t=
+ext-align: center;"><span class=3D"edgeLabel "><p>wires deps, owns map</p><=
+/span></div></foreignObject></g></g></g><g class=3D"nodes"><g class=3D"node=
+ default  " id=3D"mermaid-1784505152760-flowchart-D-0" data-look=3D"classic=
+" transform=3D"translate(136.46875, 47)"><rect class=3D"basic label-contain=
+er" style=3D"" x=3D"-128.46875" y=3D"-39" width=3D"256.9375" height=3D"78">=
+</rect><g class=3D"label" style=3D"" transform=3D"translate(-98.46875, -24)=
+"><rect></rect><foreignObject width=3D"196.9375" height=3D"48"><div xmlns=
+=3D"http://www.w3.org/1999/xhtml" style=3D"display: table-cell; white-space=
+: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span cl=
+ass=3D"nodeLabel "><p>dispatch.ts<br>makeSingleAttemptRunTask</p></span></d=
+iv></foreignObject></g></g><g class=3D"node default leak " id=3D"mermaid-17=
+84505152760-flowchart-F-1" data-look=3D"classic" transform=3D"translate(185=
+.861328125, 211)"><rect class=3D"basic label-container" style=3D"stroke:#dc=
+2626 !important;stroke-width:2px !important" x=3D"-130" y=3D"-51" width=3D"=
+260" height=3D"102"></rect><g class=3D"label" style=3D"" transform=3D"trans=
+late(-100, -36)"><rect></rect><foreignObject width=3D"200" height=3D"72"><d=
+iv xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: table; white-sp=
+ace: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; =
+width: 200px;"><span class=3D"nodeLabel "><p>failure.ts<br>retry =E2=86=92 =
+boundary =E2=86=92 incident</p></span></div></foreignObject></g></g><g clas=
+s=3D"node default leak " id=3D"mermaid-1784505152760-flowchart-H-3" data-lo=
+ok=3D"classic" transform=3D"translate(309.78515625, 394.7769546508789)"><pa=
+th d=3D"M0,10.184636468017334 a42.96484375,10.184636468017334 0,0,0 85.9296=
+875,0 a42.96484375,10.184636468017334 0,0,0 -85.9296875,0 l0,49.18463646801=
+733 a42.96484375,10.184636468017334 0,0,0 85.9296875,0 l0,-49.1846364680173=
+3" class=3D"basic label-container outer-path" style=3D"stroke:#dc2626 !impo=
+rtant;stroke-width:2px !important" label-offset-y=3D"10.184636468017334" tr=
+ansform=3D"translate(-42.96484375, -34.776954702026)"></path><g class=3D"la=
+bel" style=3D"" transform=3D"translate(-35.46484375, -2)"><rect></rect><for=
+eignObject width=3D"70.9296875" height=3D"24"><div xmlns=3D"http://www.w3.o=
+rg/1999/xhtml" style=3D"display: table-cell; white-space: nowrap; line-heig=
+ht: 1.5; max-width: 200px; text-align: center;"><span class=3D"nodeLabel ">=
+<p>holds Map</p></span></div></foreignObject></g></g><g class=3D"node defau=
+lt leak " id=3D"mermaid-1784505152760-flowchart-E-4" data-look=3D"classic" =
+transform=3D"translate(444.380859375, 47)"><rect class=3D"basic label-conta=
+iner" style=3D"stroke:#dc2626 !important;stroke-width:2px !important" x=3D"=
+-90.72265625" y=3D"-39" width=3D"181.4453125" height=3D"78"></rect><g class=
+=3D"label" style=3D"" transform=3D"translate(-60.72265625, -24)"><rect></re=
+ct><foreignObject width=3D"121.4453125" height=3D"48"><div xmlns=3D"http://=
+www.w3.org/1999/xhtml" style=3D"display: table-cell; white-space: nowrap; l=
+ine-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"node=
+Label "><p>engine-host.ts<br>resolveIncident()</p></span></div></foreignObj=
+ect></g></g></g></g></g><defs><filter id=3D"mermaid-1784505152760-drop-shad=
+ow" height=3D"130%" width=3D"130%"><feDropShadow dx=3D"4" dy=3D"4" stdDevia=
+tion=3D"0" flood-opacity=3D"0.06" flood-color=3D"#000000"></feDropShadow></=
+filter></defs><defs><filter id=3D"mermaid-1784505152760-drop-shadow-small" =
+height=3D"150%" width=3D"150%"><feDropShadow dx=3D"2" dy=3D"2" stdDeviation=
+=3D"0" flood-opacity=3D"0.06" flood-color=3D"#000000"></feDropShadow></filt=
+er></defs><linearGradient id=3D"mermaid-1784505152760-gradient" gradientUni=
+ts=3D"objectBoundingBox" x1=3D"0%" y1=3D"0%" x2=3D"100%" y2=3D"0%"><stop of=
+fset=3D"0%" stop-color=3D"hsl(0, 0%, 83.3333333333%)" stop-opacity=3D"1"></=
+stop><stop offset=3D"100%" stop-color=3D"hsl(0, 0%, 88.9215686275%)" stop-o=
+pacity=3D"1"></stop></linearGradient></svg></pre>
+            </div>
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4 f=
+lex flex-col">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">After =E2=80=94 the ladder owns its holds</p>
+              <div class=3D"flex-1 flex flex-col justify-center gap-3">
+                <div class=3D"deep-box rounded-lg text-white p-4">
+                  <p class=3D"text-xs uppercase tracking-wider border-b bor=
+der-slate-600 pb-2 mb-2">incident ladder =E2=80=94 run(task) =E2=86=92 outc=
+ome =C2=B7 resolve(instanceId, nodeId, action)</p>
+                  <div class=3D"faded text-xs space-y-1 font-mono">
+                    <p>retry rung (retries + 1 attempts)</p>
+                    <p>modeled error-boundary rung</p>
+                    <p>incident rung: persist, notify, hold token</p>
+                    <p>hold registry =E2=80=94 private</p>
+                  </div>
+                </div>
+                <div class=3D"text-center text-slate-400 text-xs">callers: =
+dispatch (run) =C2=B7 EngineHost + API (resolve)</div>
+              </div>
+            </div>
+          </div>
+
+          <p><span class=3D"font-semibold">Problem.</span> One state machin=
+e (attempt =E2=86=92 retry =E2=86=92 error boundary =E2=86=92 incident hold=
+ =E2=86=92 resolve) reads across four sites. The <span class=3D"font-mono t=
+ext-sm">holds</span> map is owned by EngineHost (engine-host.ts:58) but mut=
+ated from both failure.ts (:34-44) and engine-host.ts (:156-181), agreeing =
+by convention on a stringly <span class=3D"font-mono text-sm">`${instanceId=
+}:${nodeId}`</span> key. The rung logic is only testable today with a real =
+bpmn-engine and 100 =C3=97 100 ms polling (failure-ladder.test.ts:51-57), a=
+nd index.ts exports the ladder's internals (<span class=3D"font-mono text-s=
+m">RunTaskFn, Hold, LadderDeps</span>) as public surface.</p>
+          <p><span class=3D"font-semibold">Solution.</span> One module owns=
+ rungs and holds behind a two-method interface; dispatch and EngineHost bec=
+ome callers. The hold registry goes private =E2=80=94 no shared map, no key=
+ convention crossing a seam.</p>
+          <ul class=3D"list-disc list-inside text-sm space-y-1 text-slate-7=
+00">
+            <li>locality: rung and hold lifecycle in one module</li>
+            <li>interface is the test surface: pure state-transition tests,=
+ no engine, no polling</li>
+            <li>index.ts stops exporting the implementation</li>
+          </ul>
+        </article>
+
+        <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D CANDIDATE 4 =3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D -->
+        <article id=3D"c4" class=3D"bg-white rounded-xl border border-slate=
+-200 p-8 space-y-5 shadow-sm">
+          <div class=3D"flex items-start justify-between gap-4">
+            <h2 class=3D"font-serif text-2xl">4 =C2=B7 A DTO seam =E2=80=94=
+ stop shipping rows onto the wire</h2>
+            <div class=3D"flex gap-2 shrink-0">
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-amber-100 text-amber-800">Worth exploring</span>
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-100 text-slate-600">in-process</span>
+            </div>
+          </div>
+          <p class=3D"font-mono text-sm text-slate-500">api/server.ts =C2=
+=B7 shared/src/api/types.ts =C2=B7 engine-host/store.ts =C2=B7 inbox/inbox.=
+ts</p>
+
+          <div class=3D"grid md:grid-cols-2 gap-4">
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">Before =E2=80=94 GET /api/instances payload, per row</p>
+              <div class=3D"space-y-1.5 pt-2">
+                <div class=3D"flex items-center gap-2">
+                  <div class=3D"h-7 rounded bg-emerald-200 border border-em=
+erald-400" style=3D"width:14%"></div>
+                  <span class=3D"text-[11px] font-mono text-slate-500">9 fi=
+elds the InstanceDto declares</span>
+                </div>
+                <div class=3D"flex items-center gap-2">
+                  <div class=3D"h-7 rounded bg-red-300 border border-red-50=
+0" style=3D"width:52%"></div>
+                  <span class=3D"text-[11px] font-mono text-red-600">source=
+ =E2=80=94 full BPMN XML</span>
+                </div>
+                <div class=3D"flex items-center gap-2">
+                  <div class=3D"h-7 rounded bg-red-300 border border-red-50=
+0" style=3D"width:78%"></div>
+                  <span class=3D"text-[11px] font-mono text-red-600">engine=
+State =E2=80=94 serialized engine snapshot</span>
+                </div>
+                <div class=3D"flex items-center gap-2">
+                  <div class=3D"h-7 rounded bg-red-200 border border-red-40=
+0" style=3D"width:8%"></div>
+                  <span class=3D"text-[11px] font-mono text-red-600">stubOv=
+errides</span>
+                </div>
+              </div>
+              <p class=3D"text-[11px] text-slate-500 mt-3">the DTO the clie=
+nt is typed against omits all three =E2=80=94 no test notices</p>
+            </div>
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4 f=
+lex flex-col">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">After =E2=80=94 one mapping module at the seam</p>
+              <div class=3D"flex-1 flex flex-col justify-center gap-2 text-=
+center text-xs">
+                <div class=3D"border border-slate-300 rounded p-2 font-mono=
+">store rows =C2=B7 emit literals</div>
+                <div class=3D"text-slate-400">=E2=86=93</div>
+                <div class=3D"deep-box rounded-lg text-white p-3">
+                  <p class=3D"text-xs uppercase tracking-wider">toDto =E2=
+=80=94 row =E2=86=92 wire shape, one place per concept</p>
+                  <p class=3D"faded text-[11px] font-mono mt-1">instance =
+=C2=B7 timeline =C2=B7 event =C2=B7 user task =C2=B7 metrics</p>
+                </div>
+                <div class=3D"text-slate-400">=E2=86=93</div>
+                <div class=3D"flex gap-2 justify-center">
+                  <div class=3D"border seam border-slate-400 rounded p-2">R=
+EST routes</div>
+                  <div class=3D"border seam border-slate-400 rounded p-2">S=
+SE frames</div>
+                </div>
+                <div class=3D"flex items-center gap-2 justify-center pt-1">
+                  <div class=3D"h-5 rounded bg-emerald-200 border border-em=
+erald-400" style=3D"width:14%"></div>
+                  <span class=3D"text-[11px] font-mono text-slate-500">payl=
+oad =3D the DTO, nothing else</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p><span class=3D"font-semibold">Problem.</span> Routes return st=
+ore rows verbatim, so the interface the web client sees is really the datab=
+ase schema. <span class=3D"font-mono text-sm">InstanceRow</span> has 12 fie=
+lds, <span class=3D"font-mono text-sm">InstanceDto</span> 9 =E2=80=94 every=
+ instance list ships the full BPMN <span class=3D"font-mono text-sm">source=
+</span> XML and the serialized <span class=3D"font-mono text-sm">engineStat=
+e</span> (server.ts:99 =E2=86=92 store.listInstances()). The event shape is=
+ constructed twice (emit literal at store.ts:246, SQL projection at store.t=
+s:290) with nothing binding them; the instance-status union is declared fiv=
+e times across packages; the inbox leaks <span class=3D"font-mono text-sm">=
+submittedVars</span>. Only 2 of ~6 row=E2=86=92DTO relationships have compi=
+le pins.</p>
+          <p><span class=3D"font-semibold">Solution.</span> One mapping mod=
+ule per wire concept, used by both REST and SSE, plus wire-shape tests that=
+ pin each DTO. Drift becomes a compile or test failure, not a silent payloa=
+d leak.</p>
+          <ul class=3D"list-disc list-inside text-sm space-y-1 text-slate-7=
+00">
+            <li>instance-list payload drops the XML and engine snapshot</li=
+>
+            <li>locality: the wire shape is decided in one place</li>
+            <li>SSE and REST stop diverging on the same event concept</li>
+          </ul>
+        </article>
+
+        <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D CANDIDATE 5 =3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D -->
+        <article id=3D"c5" class=3D"bg-white rounded-xl border border-slate=
+-200 p-8 space-y-5 shadow-sm">
+          <div class=3D"flex items-start justify-between gap-4">
+            <h2 class=3D"font-serif text-2xl">5 =C2=B7 One data-access seam=
+ for the SPA</h2>
+            <div class=3D"flex gap-2 shrink-0">
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-amber-100 text-amber-800">Worth exploring</span>
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-100 text-slate-600">local-substitutable</span>
+            </div>
+          </div>
+          <p class=3D"font-mono text-sm text-slate-500">packages/web/src/pa=
+ges/*.tsx =C2=B7 api/client.ts =C2=B7 api/sse.ts</p>
+
+          <div class=3D"grid md:grid-cols-2 gap-4">
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">Before =E2=80=94 every page re-implements freshness</p>
+              <pre class=3D"mermaid" data-processed=3D"true"><svg id=3D"mer=
+maid-1784505152810" width=3D"100%" xmlns=3D"http://www.w3.org/2000/svg" xml=
+ns:xlink=3D"http://www.w3.org/1999/xlink" class=3D"flowchart" style=3D"max-=
+width: 1382.228515625px;" viewBox=3D"0 0 1382.228515625 326" role=3D"graphi=
+cs-document document" aria-roledescription=3D"flowchart-v2"><style>#mermaid=
+-1784505152810{font-family:"trebuchet ms",verdana,arial,sans-serif;font-siz=
+e:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset=
+:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#mermaid-1784505152810 .edge-=
+animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animati=
+on:dash 50s linear infinite;stroke-linecap:round;}#mermaid-1784505152810 .e=
+dge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;ani=
+mation:dash 20s linear infinite;stroke-linecap:round;}#mermaid-178450515281=
+0 .error-icon{fill:#552222;}#mermaid-1784505152810 .error-text{fill:#552222=
+;stroke:#552222;}#mermaid-1784505152810 .edge-thickness-normal{stroke-width=
+:1px;}#mermaid-1784505152810 .edge-thickness-thick{stroke-width:3.5px;}#mer=
+maid-1784505152810 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-1784505=
+152810 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-1784505=
+152810 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-1784505152810 .edg=
+e-pattern-dotted{stroke-dasharray:2;}#mermaid-1784505152810 .marker{fill:#6=
+66;stroke:#666;}#mermaid-1784505152810 .marker.cross{stroke:#666;}#mermaid-=
+1784505152810 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-=
+size:16px;}#mermaid-1784505152810 p{margin:0;}#mermaid-1784505152810 .label=
+{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#mermai=
+d-1784505152810 .cluster-label text{fill:#333;}#mermaid-1784505152810 .clus=
+ter-label span{color:#333;}#mermaid-1784505152810 .cluster-label span p{bac=
+kground-color:transparent;}#mermaid-1784505152810 .label text,#mermaid-1784=
+505152810 span{fill:#000000;color:#000000;}#mermaid-1784505152810 .node rec=
+t,#mermaid-1784505152810 .node circle,#mermaid-1784505152810 .node ellipse,=
+#mermaid-1784505152810 .node polygon,#mermaid-1784505152810 .node path{fill=
+:#eee;stroke:#999;stroke-width:1px;}#mermaid-1784505152810 .rough-node .lab=
+el text,#mermaid-1784505152810 .node .label text,#mermaid-1784505152810 .im=
+age-shape .label,#mermaid-1784505152810 .icon-shape .label{text-anchor:midd=
+le;}#mermaid-1784505152810 .node .katex path{fill:#000;stroke:#000;stroke-w=
+idth:1px;}#mermaid-1784505152810 .rough-node .label,#mermaid-1784505152810 =
+.node .label,#mermaid-1784505152810 .image-shape .label,#mermaid-1784505152=
+810 .icon-shape .label{text-align:center;}#mermaid-1784505152810 .node.clic=
+kable{cursor:pointer;}#mermaid-1784505152810 .root .anchor path{fill:#666!i=
+mportant;stroke-width:0;stroke:#666;}#mermaid-1784505152810 .arrowheadPath{=
+fill:#333333;}#mermaid-1784505152810 .edgePath .path{stroke:#666;stroke-wid=
+th:1px;}#mermaid-1784505152810 .flowchart-link{stroke:#666;fill:none;}#merm=
+aid-1784505152810 .edgeLabel{background-color:white;text-align:center;}#mer=
+maid-1784505152810 .edgeLabel p{background-color:white;}#mermaid-1784505152=
+810 .edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#mermaid=
+-1784505152810 .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#mermai=
+d-1784505152810 .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#70707=
+0;stroke-width:1px;}#mermaid-1784505152810 .cluster text{fill:#333;}#mermai=
+d-1784505152810 .cluster span{color:#333;}#mermaid-1784505152810 div.mermai=
+dTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;fo=
+nt-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background=
+:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;p=
+ointer-events:none;z-index:100;}#mermaid-1784505152810 .flowchartTitleText{=
+text-anchor:middle;font-size:18px;fill:#000000;}#mermaid-1784505152810 rect=
+.text{fill:none;stroke-width:0;}#mermaid-1784505152810 .icon-shape,#mermaid=
+-1784505152810 .image-shape{background-color:white;text-align:center;}#merm=
+aid-1784505152810 .icon-shape p,#mermaid-1784505152810 .image-shape p{backg=
+round-color:white;padding:2px;}#mermaid-1784505152810 .icon-shape .label re=
+ct,#mermaid-1784505152810 .image-shape .label rect{opacity:0.5;background-c=
+olor:white;fill:white;}#mermaid-1784505152810 .label-icon{display:inline-bl=
+ock;height:1em;overflow:visible;vertical-align:-0.125em;}#mermaid-178450515=
+2810 .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:re=
+vert;}#mermaid-1784505152810 .node .neo-node{stroke:#999;}#mermaid-17845051=
+52810 [data-look=3D"neo"].node rect,#mermaid-1784505152810 [data-look=3D"ne=
+o"].cluster rect,#mermaid-1784505152810 [data-look=3D"neo"].node polygon{st=
+roke:url(#mermaid-1784505152810-gradient);filter:drop-shadow( 1px 2px 2px r=
+gba(185,185,185,1));}#mermaid-1784505152810 [data-look=3D"neo"].swimlane.cl=
+uster rect{filter:none;}#mermaid-1784505152810 [data-look=3D"neo"].node pat=
+h{stroke:url(#mermaid-1784505152810-gradient);stroke-width:1px;}#mermaid-17=
+84505152810 [data-look=3D"neo"].node .outer-path{filter:drop-shadow( 1px 2p=
+x 2px rgba(185,185,185,1));}#mermaid-1784505152810 [data-look=3D"neo"].node=
+ .neo-line path{stroke:#999;filter:none;}#mermaid-1784505152810 [data-look=
+=3D"neo"].node circle{stroke:url(#mermaid-1784505152810-gradient);filter:dr=
+op-shadow( 1px 2px 2px rgba(185,185,185,1));}#mermaid-1784505152810 [data-l=
+ook=3D"neo"].node circle .state-start{fill:#000000;}#mermaid-1784505152810 =
+[data-look=3D"neo"].icon-shape .icon{fill:url(#mermaid-1784505152810-gradie=
+nt);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#mermaid-17845051=
+52810 [data-look=3D"neo"].icon-shape .icon-neo path{stroke:url(#mermaid-178=
+4505152810-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}=
+#mermaid-1784505152810 :root{--mermaid-font-family:"trebuchet ms",verdana,a=
+rial,sans-serif;}#mermaid-1784505152810 .leak&gt;*{stroke:rgb(220, 38, 38)!=
+important;stroke-width:2px!important;}#mermaid-1784505152810 .leak span{str=
+oke:rgb(220, 38, 38)!important;stroke-width:2px!important;}</style><g><mark=
+er id=3D"mermaid-1784505152810_flowchart-v2-pointEnd" class=3D"marker flowc=
+hart-v2" viewBox=3D"0 0 10 10" refX=3D"5" refY=3D"5" markerUnits=3D"userSpa=
+ceOnUse" markerWidth=3D"8" markerHeight=3D"8" orient=3D"auto"><path d=3D"M =
+0 0 L 10 5 L 0 10 z" class=3D"arrowMarkerPath" style=3D"stroke-width: 1; st=
+roke-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-1784505152810_=
+flowchart-v2-pointStart" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10=
+" refX=3D"4.5" refY=3D"5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"8" =
+markerHeight=3D"8" orient=3D"auto"><path d=3D"M 0 5 L 10 10 L 10 0 z" class=
+=3D"arrowMarkerPath" style=3D"stroke-width: 1; stroke-dasharray: 1, 0;"></p=
+ath></marker><marker id=3D"mermaid-1784505152810_flowchart-v2-pointEnd-marg=
+in" class=3D"marker flowchart-v2" viewBox=3D"0 0 11.5 14" refX=3D"11.5" ref=
+Y=3D"7" markerUnits=3D"userSpaceOnUse" markerWidth=3D"10.5" markerHeight=3D=
+"14" orient=3D"auto"><path d=3D"M 0 0 L 11.5 7 L 0 14 z" class=3D"arrowMark=
+erPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker>=
+<marker id=3D"mermaid-1784505152810_flowchart-v2-pointStart-margin" class=
+=3D"marker flowchart-v2" viewBox=3D"0 0 11.5 14" refX=3D"1" refY=3D"7" mark=
+erUnits=3D"userSpaceOnUse" markerWidth=3D"11.5" markerHeight=3D"14" orient=
+=3D"auto"><polygon points=3D"0,7 11.5,14 11.5,0" class=3D"arrowMarkerPath" =
+style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><mark=
+er id=3D"mermaid-1784505152810_flowchart-v2-circleEnd" class=3D"marker flow=
+chart-v2" viewBox=3D"0 0 10 10" refX=3D"11" refY=3D"5" markerUnits=3D"userS=
+paceOnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><circle c=
+x=3D"5" cy=3D"5" r=3D"5" class=3D"arrowMarkerPath" style=3D"stroke-width: 1=
+; stroke-dasharray: 1, 0;"></circle></marker><marker id=3D"mermaid-17845051=
+52810_flowchart-v2-circleStart" class=3D"marker flowchart-v2" viewBox=3D"0 =
+0 10 10" refX=3D"-1" refY=3D"5" markerUnits=3D"userSpaceOnUse" markerWidth=
+=3D"11" markerHeight=3D"11" orient=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"=
+5" class=3D"arrowMarkerPath" style=3D"stroke-width: 1; stroke-dasharray: 1,=
+ 0;"></circle></marker><marker id=3D"mermaid-1784505152810_flowchart-v2-cir=
+cleEnd-margin" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10" refY=3D"=
+5" refX=3D"12.25" markerUnits=3D"userSpaceOnUse" markerWidth=3D"14" markerH=
+eight=3D"14" orient=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" class=3D"arr=
+owMarkerPath" style=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></circle><=
+/marker><marker id=3D"mermaid-1784505152810_flowchart-v2-circleStart-margin=
+" class=3D"marker flowchart-v2" viewBox=3D"0 0 10 10" refX=3D"-2" refY=3D"5=
+" markerUnits=3D"userSpaceOnUse" markerWidth=3D"14" markerHeight=3D"14" ori=
+ent=3D"auto"><circle cx=3D"5" cy=3D"5" r=3D"5" class=3D"arrowMarkerPath" st=
+yle=3D"stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker =
+id=3D"mermaid-1784505152810_flowchart-v2-crossEnd" class=3D"marker cross fl=
+owchart-v2" viewBox=3D"0 0 11 11" refX=3D"12" refY=3D"5.2" markerUnits=3D"u=
+serSpaceOnUse" markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><path=
+ d=3D"M 1,1 l 9,9 M 10,1 l -9,9" class=3D"arrowMarkerPath" style=3D"stroke-=
+width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-17=
+84505152810_flowchart-v2-crossStart" class=3D"marker cross flowchart-v2" vi=
+ewBox=3D"0 0 11 11" refX=3D"-1" refY=3D"5.2" markerUnits=3D"userSpaceOnUse"=
+ markerWidth=3D"11" markerHeight=3D"11" orient=3D"auto"><path d=3D"M 1,1 l =
+9,9 M 10,1 l -9,9" class=3D"arrowMarkerPath" style=3D"stroke-width: 2; stro=
+ke-dasharray: 1, 0;"></path></marker><marker id=3D"mermaid-1784505152810_fl=
+owchart-v2-crossEnd-margin" class=3D"marker cross flowchart-v2" viewBox=3D"=
+0 0 15 15" refX=3D"17.7" refY=3D"7.5" markerUnits=3D"userSpaceOnUse" marker=
+Width=3D"12" markerHeight=3D"12" orient=3D"auto"><path d=3D"M 1,1 L 14,14 M=
+ 1,14 L 14,1" class=3D"arrowMarkerPath" style=3D"stroke-width: 2.5;"></path=
+></marker><marker id=3D"mermaid-1784505152810_flowchart-v2-crossStart-margi=
+n" class=3D"marker cross flowchart-v2" viewBox=3D"0 0 15 15" refX=3D"-3.5" =
+refY=3D"7.5" markerUnits=3D"userSpaceOnUse" markerWidth=3D"12" markerHeight=
+=3D"12" orient=3D"auto"><path d=3D"M 1,1 L 14,14 M 1,14 L 14,1" class=3D"ar=
+rowMarkerPath" style=3D"stroke-width: 2.5; stroke-dasharray: 1, 0;"></path>=
+</marker><g class=3D"root"><g class=3D"clusters"></g><g class=3D"edgePaths"=
+><path d=3D"M87.813,62L87.813,68.167C87.813,74.333,87.813,86.667,95.654,100=
+.533C103.495,114.399,119.178,129.798,127.019,137.498L134.86,145.197" id=3D"=
+mermaid-1784505152810-L_I_RI_0" class=3D" edge-thickness-normal edge-patter=
+n-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=3D";=
+" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_I_RI_0" data-points=3D"W=
+3sieCI6ODcuODEyNSwieSI6NjJ9LHsieCI6ODcuODEyNSwieSI6OTl9LHsieCI6MTM3LjcxNDEy=
+NDE3NzYzMTYsInkiOjE0OH1d" data-look=3D"classic" marker-end=3D"url(#mermaid-=
+1784505152810_flowchart-v2-pointEnd)"></path><path d=3D"M289.145,62L289.145=
+,68.167C289.145,74.333,289.145,86.667,297.561,100.549C305.977,114.432,322.8=
+09,129.865,331.225,137.581L339.641,145.297" id=3D"mermaid-1784505152810-L_X=
+_RX_0" class=3D" edge-thickness-normal edge-pattern-solid edge-thickness-no=
+rmal edge-pattern-solid flowchart-link" style=3D";" data-edge=3D"true" data=
+-et=3D"edge" data-id=3D"L_X_RX_0" data-points=3D"W3sieCI6Mjg5LjE0NDUzMTI1LC=
+J5Ijo2Mn0seyJ4IjoyODkuMTQ0NTMxMjUsInkiOjk5fSx7IngiOjM0Mi41ODk2ODk1NTU5MjEwN=
+CwieSI6MTQ4fV0=3D" data-look=3D"classic" marker-end=3D"url(#mermaid-1784505=
+152810_flowchart-v2-pointEnd)"></path><path d=3D"M800.297,62L800.297,68.167=
+C800.297,74.333,800.297,86.667,796.862,100.393C793.427,114.119,786.557,129.=
+239,783.122,136.799L779.687,144.358" id=3D"mermaid-1784505152810-L_D_RD_0" =
+class=3D" edge-thickness-normal edge-pattern-solid edge-thickness-normal ed=
+ge-pattern-solid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"=
+edge" data-id=3D"L_D_RD_0" data-points=3D"W3sieCI6ODAwLjI5Njg3NSwieSI6NjJ9L=
+HsieCI6ODAwLjI5Njg3NSwieSI6OTl9LHsieCI6Nzc4LjAzMjA0NjY2OTQwNzksInkiOjE0OH1d=
+" data-look=3D"classic" marker-end=3D"url(#mermaid-1784505152810_flowchart-=
+v2-pointEnd)"></path><path d=3D"M1030.871,62L1030.871,68.167C1030.871,74.33=
+3,1030.871,86.667,1028.809,98.375C1026.747,110.084,1022.623,121.167,1020.56=
+1,126.709L1018.498,132.251" id=3D"mermaid-1784505152810-L_T_RT_0" class=3D"=
+ edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-patter=
+n-solid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" dat=
+a-id=3D"L_T_RT_0" data-points=3D"W3sieCI6MTAzMC44NzEwOTM3NSwieSI6NjJ9LHsieC=
+I6MTAzMC44NzEwOTM3NSwieSI6OTl9LHsieCI6MTAxNy4xMDM1NDEzMjQwMTMxLCJ5IjoxMzZ9X=
+Q=3D=3D" data-look=3D"classic" marker-end=3D"url(#mermaid-1784505152810_flo=
+wchart-v2-pointEnd)"></path><path d=3D"M1262.217,62L1262.217,68.167C1262.21=
+7,74.333,1262.217,86.667,1262.217,100.333C1262.217,114,1262.217,129,1262.21=
+7,136.5L1262.217,144" id=3D"mermaid-1784505152810-L_S_RS_0" class=3D" edge-=
+thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-soli=
+d flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=
+=3D"L_S_RS_0" data-points=3D"W3sieCI6MTI2Mi4yMTY3OTY4NzUsInkiOjYyfSx7IngiOj=
+EyNjIuMjE2Nzk2ODc1LCJ5Ijo5OX0seyJ4IjoxMjYyLjIxNjc5Njg3NSwieSI6MTQ4fV0=3D" d=
+ata-look=3D"classic" marker-end=3D"url(#mermaid-1784505152810_flowchart-v2-=
+pointEnd)"></path><path d=3D"M165.211,202L165.211,208.167C165.211,214.333,1=
+65.211,226.667,216.24,239.928C267.269,253.19,369.327,267.38,420.357,274.475=
+L471.386,281.57" id=3D"mermaid-1784505152810-L_RI_C_0" class=3D" edge-thick=
+ness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flo=
+wchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_R=
+I_C_0" data-points=3D"W3sieCI6MTY1LjIxMDkzNzUsInkiOjIwMn0seyJ4IjoxNjUuMjEwO=
+TM3NSwieSI6MjM5fSx7IngiOjQ3NS4zNDc2NTYyNSwieSI6MjgyLjEyMTA2MzY4MDg5NTc2fV0=
+=3D" data-look=3D"classic" marker-end=3D"url(#mermaid-1784505152810_flowcha=
+rt-v2-pointEnd)"></path><path d=3D"M372.039,202L372.039,208.167C372.039,214=
+.333,372.039,226.667,388.621,237.991C405.202,249.316,438.365,259.632,454.94=
+7,264.79L471.528,269.948" id=3D"mermaid-1784505152810-L_RX_C_0" class=3D" e=
+dge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-=
+solid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"edge" data-=
+id=3D"L_RX_C_0" data-points=3D"W3sieCI6MzcyLjAzOTA2MjUsInkiOjIwMn0seyJ4Ijoz=
+NzIuMDM5MDYyNSwieSI6MjM5fSx7IngiOjQ3NS4zNDc2NTYyNSwieSI6MjcxLjEzNTYyMzMyMDQ=
+4MTR9XQ=3D=3D" data-look=3D"classic" marker-end=3D"url(#mermaid-17845051528=
+10_flowchart-v2-pointEnd)"></path><path d=3D"M765.764,202L765.764,208.167C7=
+65.764,214.333,765.764,226.667,739.297,238.908C712.831,251.149,659.898,263.=
+299,633.431,269.373L606.965,275.448" id=3D"mermaid-1784505152810-L_RD_C_0" =
+class=3D" edge-thickness-normal edge-pattern-solid edge-thickness-normal ed=
+ge-pattern-solid flowchart-link" style=3D";" data-edge=3D"true" data-et=3D"=
+edge" data-id=3D"L_RD_C_0" data-points=3D"W3sieCI6NzY1Ljc2MzY3MTg3NSwieSI6M=
+jAyfSx7IngiOjc2NS43NjM2NzE4NzUsInkiOjIzOX0seyJ4Ijo2MDMuMDY2NDA2MjUsInkiOjI3=
+Ni4zNDI3OTMzNDgxMDM4NH1d" data-look=3D"classic" marker-end=3D"url(#mermaid-=
+1784505152810_flowchart-v2-pointEnd)"></path><path d=3D"M1002.592,214L1002.=
+592,218.167C1002.592,222.333,1002.592,230.667,936.667,242.231C870.742,253.7=
+96,738.892,268.592,672.967,275.99L607.041,283.388" id=3D"mermaid-1784505152=
+810-L_RT_C_0" class=3D" edge-thickness-normal edge-pattern-solid edge-thick=
+ness-normal edge-pattern-solid flowchart-link" style=3D";" data-edge=3D"tru=
+e" data-et=3D"edge" data-id=3D"L_RT_C_0" data-points=3D"W3sieCI6MTAwMi41OTE=
+3OTY4NzUsInkiOjIxNH0seyJ4IjoxMDAyLjU5MTc5Njg3NSwieSI6MjM5fSx7IngiOjYwMy4wNj=
+Y0MDYyNSwieSI6MjgzLjgzMzg0NDAzOTkwNjc1fV0=3D" data-look=3D"classic" marker-=
+end=3D"url(#mermaid-1784505152810_flowchart-v2-pointEnd)"></path><path d=3D=
+"M497.842,62L484.685,68.167C471.527,74.333,445.213,86.667,403.482,101.393C3=
+61.751,116.12,304.604,133.24,276.03,141.801L247.457,150.361" id=3D"mermaid-=
+1784505152810-L_SSE_RI_0" class=3D" edge-thickness-normal edge-pattern-dott=
+ed edge-thickness-normal edge-pattern-solid flowchart-link" style=3D";" dat=
+a-edge=3D"true" data-et=3D"edge" data-id=3D"L_SSE_RI_0" data-points=3D"W3si=
+eCI6NDk3Ljg0MTg1NzkxMDE1NjI1LCJ5Ijo2Mn0seyJ4Ijo0MTguODk4NDM3NSwieSI6OTl9LHs=
+ieCI6MjQzLjYyNSwieSI6MTUxLjUwODYyMjgxMzUwMDg2fV0=3D" data-look=3D"classic" =
+marker-end=3D"url(#mermaid-1784505152810_flowchart-v2-pointEnd)"></path><pa=
+th d=3D"M569.173,62L572.308,68.167C575.442,74.333,581.711,86.667,562.271,10=
+0.779C542.83,114.891,497.679,130.781,475.104,138.727L452.528,146.672" id=3D=
+"mermaid-1784505152810-L_SSE_RX_0" class=3D" edge-thickness-normal edge-pat=
+tern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=
+=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_SSE_RX_0" data-poin=
+ts=3D"W3sieCI6NTY5LjE3MzMzOTg0Mzc1LCJ5Ijo2Mn0seyJ4Ijo1ODcuOTgwNDY4NzUsInkiO=
+jk5fSx7IngiOjQ0OC43NTUwODg0MDQ2MDUyNiwieSI6MTQ4fV0=3D" data-look=3D"classic=
+" marker-end=3D"url(#mermaid-1784505152810_flowchart-v2-pointEnd)"></path><=
+path d=3D"M623.266,61.486L639.274,67.739C655.283,73.991,687.299,86.495,733.=
+608,100.877C779.916,115.258,840.516,131.517,870.815,139.646L901.115,147.775=
+" id=3D"mermaid-1784505152810-L_SSE_RT_0" class=3D" edge-thickness-normal e=
+dge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link"=
+ style=3D";" data-edge=3D"true" data-et=3D"edge" data-id=3D"L_SSE_RT_0" dat=
+a-points=3D"W3sieCI6NjIzLjI2NTYyNSwieSI6NjEuNDg2Mzg4NTU3ODA2OTF9LHsieCI6NzE=
+5LjMxNjQwNjI1LCJ5Ijo5OX0seyJ4Ijo5MDQuOTc4NTE1NjI1LCJ5IjoxNDguODExMzE3MTEyMT=
+g1MTh9XQ=3D=3D" data-look=3D"classic" marker-end=3D"url(#mermaid-1784505152=
+810_flowchart-v2-pointEnd)"></path></g><g class=3D"edgeLabels"><g class=3D"=
+edgeLabel"><g class=3D"label" data-id=3D"L_I_RI_0" transform=3D"translate(0=
+, 0)"><foreignObject width=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.o=
+rg/1999/xhtml" class=3D"labelBkg" style=3D"display: table-cell; white-space=
+: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span cl=
+ass=3D"edgeLabel "></span></div></foreignObject></g></g><g class=3D"edgeLab=
+el"><g class=3D"label" data-id=3D"L_X_RX_0" transform=3D"translate(0, 0)"><=
+foreignObject width=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999=
+/xhtml" class=3D"labelBkg" style=3D"display: table-cell; white-space: nowra=
+p; line-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"=
+edgeLabel "></span></div></foreignObject></g></g><g class=3D"edgeLabel"><g =
+class=3D"label" data-id=3D"L_D_RD_0" transform=3D"translate(0, 0)"><foreign=
+Object width=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml"=
+ class=3D"labelBkg" style=3D"display: table-cell; white-space: nowrap; line=
+-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"edgeLab=
+el "></span></div></foreignObject></g></g><g class=3D"edgeLabel"><g class=
+=3D"label" data-id=3D"L_T_RT_0" transform=3D"translate(0, 0)"><foreignObjec=
+t width=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" clas=
+s=3D"labelBkg" style=3D"display: table-cell; white-space: nowrap; line-heig=
+ht: 1.5; max-width: 200px; text-align: center;"><span class=3D"edgeLabel ">=
+</span></div></foreignObject></g></g><g class=3D"edgeLabel"><g class=3D"lab=
+el" data-id=3D"L_S_RS_0" transform=3D"translate(0, 0)"><foreignObject width=
+=3D"0" height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"la=
+belBkg" style=3D"display: table-cell; white-space: nowrap; line-height: 1.5=
+; max-width: 200px; text-align: center;"><span class=3D"edgeLabel "></span>=
+</div></foreignObject></g></g><g class=3D"edgeLabel"><g class=3D"label" dat=
+a-id=3D"L_RI_C_0" transform=3D"translate(0, 0)"><foreignObject width=3D"0" =
+height=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg"=
+ style=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-w=
+idth: 200px; text-align: center;"><span class=3D"edgeLabel "></span></div><=
+/foreignObject></g></g><g class=3D"edgeLabel"><g class=3D"label" data-id=3D=
+"L_RX_C_0" transform=3D"translate(0, 0)"><foreignObject width=3D"0" height=
+=3D"0"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=
+=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-width: =
+200px; text-align: center;"><span class=3D"edgeLabel "></span></div></forei=
+gnObject></g></g><g class=3D"edgeLabel"><g class=3D"label" data-id=3D"L_RD_=
+C_0" transform=3D"translate(0, 0)"><foreignObject width=3D"0" height=3D"0">=
+<div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D"dis=
+play: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; =
+text-align: center;"><span class=3D"edgeLabel "></span></div></foreignObjec=
+t></g></g><g class=3D"edgeLabel"><g class=3D"label" data-id=3D"L_RT_C_0" tr=
+ansform=3D"translate(0, 0)"><foreignObject width=3D"0" height=3D"0"><div xm=
+lns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D"display: t=
+able-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-al=
+ign: center;"><span class=3D"edgeLabel "></span></div></foreignObject></g><=
+/g><g class=3D"edgeLabel" transform=3D"translate(373.02013, 112.74428)"><g =
+class=3D"label" data-id=3D"L_SSE_RI_0" transform=3D"translate(-55.66796875,=
+ -12)"><foreignObject width=3D"111.3359375" height=3D"24"><div xmlns=3D"htt=
+p://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D"display: table-cell;=
+ white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: cente=
+r;"><span class=3D"edgeLabel "><p>blanket refetch</p></span></div></foreign=
+Object></g></g><g class=3D"edgeLabel" transform=3D"translate(537.94353, 116=
+.61037)"><g class=3D"label" data-id=3D"L_SSE_RX_0" transform=3D"translate(-=
+55.66796875, -12)"><foreignObject width=3D"111.3359375" height=3D"24"><div =
+xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" style=3D"display:=
+ table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-=
+align: center;"><span class=3D"edgeLabel "><p>blanket refetch</p></span></d=
+iv></foreignObject></g></g><g class=3D"edgeLabel" transform=3D"translate(76=
+2.35024, 110.54555)"><g class=3D"label" data-id=3D"L_SSE_RT_0" transform=3D=
+"translate(-55.66796875, -12)"><foreignObject width=3D"111.3359375" height=
+=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" class=3D"labelBkg" styl=
+e=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-width:=
+ 200px; text-align: center;"><span class=3D"edgeLabel "><p>blanket refetch<=
+/p></span></div></foreignObject></g></g></g><g class=3D"nodes"><g class=3D"=
+node default  " id=3D"mermaid-1784505152810-flowchart-I-0" data-look=3D"cla=
+ssic" transform=3D"translate(87.8125, 35)"><rect class=3D"basic label-conta=
+iner" style=3D"" x=3D"-79.8125" y=3D"-27" width=3D"159.625" height=3D"54"><=
+/rect><g class=3D"label" style=3D"" transform=3D"translate(-49.8125, -12)">=
+<rect></rect><foreignObject width=3D"99.625" height=3D"24"><div xmlns=3D"ht=
+tp://www.w3.org/1999/xhtml" style=3D"display: table-cell; white-space: nowr=
+ap; line-height: 1.5; max-width: 200px; text-align: center;"><span class=3D=
+"nodeLabel "><p>InstancesPage</p></span></div></foreignObject></g></g><g cl=
+ass=3D"node default  " id=3D"mermaid-1784505152810-flowchart-RI-1" data-loo=
+k=3D"classic" transform=3D"translate(165.2109375, 175)"><rect class=3D"basi=
+c label-container" style=3D"" x=3D"-78.4140625" y=3D"-27" width=3D"156.8281=
+25" height=3D"54"></rect><g class=3D"label" style=3D"" transform=3D"transla=
+te(-48.4140625, -12)"><rect></rect><foreignObject width=3D"96.828125" heigh=
+t=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: tabl=
+e-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align=
+: center;"><span class=3D"nodeLabel "><p>own refresh()</p></span></div></fo=
+reignObject></g></g><g class=3D"node default  " id=3D"mermaid-1784505152810=
+-flowchart-X-2" data-look=3D"classic" transform=3D"translate(289.14453125, =
+35)"><rect class=3D"basic label-container" style=3D"" x=3D"-66.0234375" y=
+=3D"-27" width=3D"132.046875" height=3D"54"></rect><g class=3D"label" style=
+=3D"" transform=3D"translate(-36.0234375, -12)"><rect></rect><foreignObject=
+ width=3D"72.046875" height=3D"24"><div xmlns=3D"http://www.w3.org/1999/xht=
+ml" style=3D"display: table-cell; white-space: nowrap; line-height: 1.5; ma=
+x-width: 200px; text-align: center;"><span class=3D"nodeLabel "><p>InboxPag=
+e</p></span></div></foreignObject></g></g><g class=3D"node default  " id=3D=
+"mermaid-1784505152810-flowchart-RX-3" data-look=3D"classic" transform=3D"t=
+ranslate(372.0390625, 175)"><rect class=3D"basic label-container" style=3D"=
+" x=3D"-78.4140625" y=3D"-27" width=3D"156.828125" height=3D"54"></rect><g =
+class=3D"label" style=3D"" transform=3D"translate(-48.4140625, -12)"><rect>=
+</rect><foreignObject width=3D"96.828125" height=3D"24"><div xmlns=3D"http:=
+//www.w3.org/1999/xhtml" style=3D"display: table-cell; white-space: nowrap;=
+ line-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"no=
+deLabel "><p>own refresh()</p></span></div></foreignObject></g></g><g class=
+=3D"node default  " id=3D"mermaid-1784505152810-flowchart-D-4" data-look=3D=
+"classic" transform=3D"translate(800.296875, 35)"><rect class=3D"basic labe=
+l-container" style=3D"" x=3D"-85.18359375" y=3D"-27" width=3D"170.3671875" =
+height=3D"54"></rect><g class=3D"label" style=3D"" transform=3D"translate(-=
+55.18359375, -12)"><rect></rect><foreignObject width=3D"110.3671875" height=
+=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: table=
+-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align:=
+ center;"><span class=3D"nodeLabel "><p>DefinitionsPage</p></span></div></f=
+oreignObject></g></g><g class=3D"node default  " id=3D"mermaid-178450515281=
+0-flowchart-RD-5" data-look=3D"classic" transform=3D"translate(765.76367187=
+5, 175)"><rect class=3D"basic label-container" style=3D"" x=3D"-89.21484375=
+" y=3D"-27" width=3D"178.4296875" height=3D"54"></rect><g class=3D"label" s=
+tyle=3D"" transform=3D"translate(-59.21484375, -12)"><rect></rect><foreignO=
+bject width=3D"118.4296875" height=3D"24"><div xmlns=3D"http://www.w3.org/1=
+999/xhtml" style=3D"display: table-cell; white-space: nowrap; line-height: =
+1.5; max-width: 200px; text-align: center;"><span class=3D"nodeLabel "><p>o=
+wn refresh() =C3=972</p></span></div></foreignObject></g></g><g class=3D"no=
+de default  " id=3D"mermaid-1784505152810-flowchart-T-6" data-look=3D"class=
+ic" transform=3D"translate(1030.87109375, 35)"><rect class=3D"basic label-c=
+ontainer" style=3D"" x=3D"-81.19140625" y=3D"-27" width=3D"162.3828125" hei=
+ght=3D"54"></rect><g class=3D"label" style=3D"" transform=3D"translate(-51.=
+19140625, -12)"><rect></rect><foreignObject width=3D"102.3828125" height=3D=
+"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: table-ce=
+ll; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: ce=
+nter;"><span class=3D"nodeLabel "><p>InstanceDetail</p></span></div></forei=
+gnObject></g></g><g class=3D"node default leak " id=3D"mermaid-178450515281=
+0-flowchart-RT-7" data-look=3D"classic" transform=3D"translate(1002.5917968=
+75, 175)"><rect class=3D"basic label-container" style=3D"stroke:#dc2626 !im=
+portant;stroke-width:2px !important" x=3D"-97.61328125" y=3D"-39" width=3D"=
+195.2265625" height=3D"78"></rect><g class=3D"label" style=3D"" transform=
+=3D"translate(-67.61328125, -24)"><rect></rect><foreignObject width=3D"135.=
+2265625" height=3D"48"><div xmlns=3D"http://www.w3.org/1999/xhtml" style=3D=
+"display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200=
+px; text-align: center;"><span class=3D"nodeLabel "><p>own refresh()<br>4-e=
+ndpoint fan-out</p></span></div></foreignObject></g></g><g class=3D"node de=
+fault  " id=3D"mermaid-1784505152810-flowchart-S-8" data-look=3D"classic" t=
+ransform=3D"translate(1262.216796875, 35)"><rect class=3D"basic label-conta=
+iner" style=3D"" x=3D"-71.875" y=3D"-27" width=3D"143.75" height=3D"54"></r=
+ect><g class=3D"label" style=3D"" transform=3D"translate(-41.875, -12)"><re=
+ct></rect><foreignObject width=3D"83.75" height=3D"24"><div xmlns=3D"http:/=
+/www.w3.org/1999/xhtml" style=3D"display: table-cell; white-space: nowrap; =
+line-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"nod=
+eLabel "><p>SystemPage</p></span></div></foreignObject></g></g><g class=3D"=
+node default leak " id=3D"mermaid-1784505152810-flowchart-RS-9" data-look=
+=3D"classic" transform=3D"translate(1262.216796875, 175)"><rect class=3D"ba=
+sic label-container" style=3D"stroke:#dc2626 !important;stroke-width:2px !i=
+mportant" x=3D"-112.01171875" y=3D"-27" width=3D"224.0234375" height=3D"54"=
+></rect><g class=3D"label" style=3D"" transform=3D"translate(-82.01171875, =
+-12)"><rect></rect><foreignObject width=3D"164.0234375" height=3D"24"><div =
+xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"display: table-cell; white-=
+space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><sp=
+an class=3D"nodeLabel "><p>raw fetch + setInterval</p></span></div></foreig=
+nObject></g></g><g class=3D"node default  " id=3D"mermaid-1784505152810-flo=
+wchart-C-11" data-look=3D"classic" transform=3D"translate(539.20703125, 291=
+)"><rect class=3D"basic label-container" style=3D"" x=3D"-63.859375" y=3D"-=
+27" width=3D"127.71875" height=3D"54"></rect><g class=3D"label" style=3D"" =
+transform=3D"translate(-33.859375, -12)"><rect></rect><foreignObject width=
+=3D"67.71875" height=3D"24"><div xmlns=3D"http://www.w3.org/1999/xhtml" sty=
+le=3D"display: table-cell; white-space: nowrap; line-height: 1.5; max-width=
+: 200px; text-align: center;"><span class=3D"nodeLabel "><p>api client</p><=
+/span></div></foreignObject></g></g><g class=3D"node default  " id=3D"merma=
+id-1784505152810-flowchart-SSE-18" data-look=3D"classic" transform=3D"trans=
+late(555.44921875, 35)"><rect class=3D"basic label-container" style=3D"" x=
+=3D"-67.81640625" y=3D"-27" width=3D"135.6328125" height=3D"54"></rect><g c=
+lass=3D"label" style=3D"" transform=3D"translate(-37.81640625, -12)"><rect>=
+</rect><foreignObject width=3D"75.6328125" height=3D"24"><div xmlns=3D"http=
+://www.w3.org/1999/xhtml" style=3D"display: table-cell; white-space: nowrap=
+; line-height: 1.5; max-width: 200px; text-align: center;"><span class=3D"n=
+odeLabel "><p>SSE events</p></span></div></foreignObject></g></g></g></g></=
+g><defs><filter id=3D"mermaid-1784505152810-drop-shadow" height=3D"130%" wi=
+dth=3D"130%"><feDropShadow dx=3D"4" dy=3D"4" stdDeviation=3D"0" flood-opaci=
+ty=3D"0.06" flood-color=3D"#000000"></feDropShadow></filter></defs><defs><f=
+ilter id=3D"mermaid-1784505152810-drop-shadow-small" height=3D"150%" width=
+=3D"150%"><feDropShadow dx=3D"2" dy=3D"2" stdDeviation=3D"0" flood-opacity=
+=3D"0.06" flood-color=3D"#000000"></feDropShadow></filter></defs><linearGra=
+dient id=3D"mermaid-1784505152810-gradient" gradientUnits=3D"objectBounding=
+Box" x1=3D"0%" y1=3D"0%" x2=3D"100%" y2=3D"0%"><stop offset=3D"0%" stop-col=
+or=3D"hsl(0, 0%, 83.3333333333%)" stop-opacity=3D"1"></stop><stop offset=3D=
+"100%" stop-color=3D"hsl(0, 0%, 88.9215686275%)" stop-opacity=3D"1"></stop>=
+</linearGradient></svg></pre>
+            </div>
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4 f=
+lex flex-col">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">After =E2=80=94 pages declare, the hook maintains</p>
+              <div class=3D"flex-1 flex flex-col justify-center gap-3">
+                <div class=3D"flex flex-wrap gap-1.5 justify-center text-[1=
+0px]">
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">Instances</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">Inbox</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">Definitions</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">Detail</span>
+                  <span class=3D"border border-slate-300 rounded-full px-2 =
+py-0.5">System</span>
+                </div>
+                <div class=3D"text-center text-slate-400 text-xs">=E2=86=93=
+ useResource(fetcher, { invalidateOn })</div>
+                <div class=3D"deep-box rounded-lg text-white p-4">
+                  <p class=3D"text-xs uppercase tracking-wider border-b bor=
+der-slate-600 pb-2 mb-2">resource hook =E2=80=94 data =C2=B7 error =C2=B7 l=
+oading =C2=B7 refetch</p>
+                  <div class=3D"faded text-xs space-y-1 font-mono">
+                    <p>SSE invalidation policy</p>
+                    <p>polling fallback (healthz)</p>
+                    <p>abort on unmount, dedupe</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p><span class=3D"font-semibold">Problem.</span> One shared HTTP =
+adapter exists (api/client.ts, a real seam), but the freshness policy above=
+ it is copy-pasted six ways: six hand-rolled <span class=3D"font-mono text-=
+sm">refresh()</span> definitions, three pages blanket-refetching on any SSE=
+ event, InstanceDetail re-fetching the whole inbox and scheduler per event =
+to derive two counts, and SystemPage bypassing both seams with raw <span cl=
+ass=3D"font-mono text-sm">fetch</span> + <span class=3D"font-mono text-sm">=
+setInterval</span>. Six of seven pages have zero tests =E2=80=94 the logic =
+is trapped in components.</p>
+          <p><span class=3D"font-semibold">Solution.</span> One resource ho=
+ok deepens the data-access seam: loading, error, refetch, and SSE invalidat=
+ion behind a single interface. Pages declare what they read; the hook decid=
+es how it stays fresh.</p>
+          <ul class=3D"list-disc list-inside text-sm space-y-1 text-slate-7=
+00">
+            <li>leverage: one hook, seven pages</li>
+            <li>locality: invalidation policy lives in one file, tested onc=
+e</li>
+            <li>pages thin out enough to component-test</li>
+          </ul>
+        </article>
+
+        <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D CANDIDATE 6 =3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D -->
+        <article id=3D"c6" class=3D"bg-white rounded-xl border border-slate=
+-200 p-8 space-y-5 shadow-sm">
+          <div class=3D"flex items-start justify-between gap-4">
+            <h2 class=3D"font-serif text-2xl">6 =C2=B7 Process variables de=
+serve an interface</h2>
+            <div class=3D"flex gap-2 shrink-0">
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-200 text-slate-700">Speculative</span>
+              <span class=3D"px-2.5 py-1 rounded-full text-xs font-medium b=
+g-slate-100 text-slate-600">in-process</span>
+            </div>
+          </div>
+          <p class=3D"font-mono text-sm text-slate-500">engine-host/engine-=
+host.ts =C2=B7 dispatch.ts =C2=B7 test/dispatch.test.ts:25-28 =C2=B7 test/p=
+ersistence.test.ts:25</p>
+
+          <div class=3D"grid md:grid-cols-2 gap-4">
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">Before =E2=80=94 tests tunnel through the seam</p>
+              <div class=3D"space-y-1 text-xs font-mono">
+                <div class=3D"border-l-4 border-slate-300 bg-slate-50 p-2">=
+test wants: current process variables</div>
+                <div class=3D"border-l-4 border-red-400 bg-red-50 p-2 text-=
+red-700">store.getInstance(id).engineState</div>
+                <div class=3D"border-l-4 border-red-400 bg-red-50 p-2 text-=
+red-700">JSON.parse(=E2=80=A6)</div>
+                <div class=3D"border-l-4 border-red-400 bg-red-50 p-2 text-=
+red-700">.definitions[0].execution</div>
+                <div class=3D"border-l-4 border-red-400 bg-red-50 p-2 text-=
+red-700">.processes[0].environment</div>
+                <div class=3D"border-l-4 border-red-400 bg-red-50 p-2 text-=
+red-700">.variables =E2=80=94 private engine JSON, 5 levels deep</div>
+              </div>
+            </div>
+            <div class=3D"rounded-lg border border-slate-200 bg-white p-4 f=
+lex flex-col">
+              <p class=3D"text-xs uppercase tracking-wider text-slate-400 m=
+b-2">After =E2=80=94 one read seam</p>
+              <div class=3D"flex-1 flex flex-col justify-center gap-2 text-=
+center text-xs">
+                <div class=3D"border border-slate-300 rounded p-2 font-mono=
+">tests =C2=B7 instance-detail UI (future)</div>
+                <div class=3D"text-slate-400">=E2=86=93</div>
+                <div class=3D"deep-box rounded-lg text-white p-3">
+                  <p class=3D"text-xs uppercase tracking-wider">host.variab=
+les(instanceId) =E2=86=92 Record&lt;string, unknown&gt;</p>
+                  <p class=3D"faded text-[11px] font-mono mt-1">absorbs the=
+ engine-state shape; live or recovered</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p><span class=3D"font-semibold">Problem.</span> Current process =
+variables live only inside serialized bpmn-engine JSON. Tests parse <span c=
+lass=3D"font-mono text-sm">engineState</span> and walk five levels of engin=
+e-private structure; <span class=3D"font-mono text-sm">signal()</span> and =
+dispatch mutate <span class=3D"font-mono text-sm">environment.variables</sp=
+an> through <span class=3D"font-mono text-sm">any</span>. The de-facto inte=
+rface is another library's private state shape.</p>
+          <p><span class=3D"font-semibold">Solution.</span> A single read m=
+ethod on EngineHost that resolves variables from the live process or a reco=
+vered snapshot. Tests assert through it; a bpmn-engine upgrade that moves t=
+he shape breaks one implementation, not every variable assertion.</p>
+          <ul class=3D"list-disc list-inside text-sm space-y-1 text-slate-7=
+00">
+            <li>tests stop depending on engine-internal JSON</li>
+            <li>one implementation absorbs engine shape changes</li>
+            <li>unlocks a variables panel in instance detail</li>
+          </ul>
+          <p class=3D"text-sm text-slate-500 border-l-4 border-slate-200 pl=
+-3">Speculative because today it has exactly two callers, both tests =E2=80=
+=94 one adapter, hypothetical seam. It turns real the moment the UI wants v=
+ariables.</p>
+        </article>
+
+      </section>
+
+      <!-- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D TOP RECOMMENDATION =3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D -->
+      <section id=3D"top-recommendation" class=3D"deep-box rounded-xl text-=
+white p-8 space-y-3">
+        <p class=3D"text-xs uppercase tracking-wider text-slate-400">Top re=
+commendation</p>
+        <h2 class=3D"font-serif text-2xl"><a href=3D"file:///private/var/fo=
+lders/q9/90x2_90s73z9sz5qgxzhnbc40000gq/T/architecture-review-20260720-0748=
+29.html#c2" class=3D"underline decoration-slate-500 underline-offset-4">Sta=
+rt with the composition root (#2)</a></h2>
+        <p class=3D"text-slate-300 text-sm leading-relaxed">Every other can=
+didate on this page edits the daemon's object graph =E2=80=94 the events mo=
+dule changes what the store and API receive, the incident ladder changes wh=
+at EngineHost wires, the DTO seam changes what routes call. With ten hand-c=
+opied graphs in the tests, each of those refactors pays a ten-file tax befo=
+re it starts. Build <span class=3D"font-mono">createDaemon</span> first; it=
+ is the smallest candidate, and it makes the two Strong deepenings (above a=
+ll the events module, #1) one-file changes instead of eleven.</p>
+      </section>
+
+    </main>
+ =20
+
+<div class=3D"mermaidTooltip" style=3D"opacity: 0; position: absolute; text=
+-align: center; max-width: 200px; padding: 2px; font-size: 12px; background=
+: rgb(255, 255, 222); border: 1px solid rgb(51, 51, 51); border-radius: 2px=
+; pointer-events: none; z-index: 100;"></div></body></html>
+------MultipartBoundary--GvtCEdxnQBEQ0rUtGHwMyqTcVeEQrL0c3hXsZswgIM----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: cid:css-0085eed1-61f6-4da2-bafd-1e2168bfb500@mhtml.blink
+
+@charset "utf-8";
+
+*, ::before, ::after { --tw-border-spacing-x: 0; --tw-border-spacing-y: 0; =
+--tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; -=
+-tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: =
+; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-=
+from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ;=
+ --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-s=
+pacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-widt=
+h: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5=
+); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-sh=
+adow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightne=
+ss: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; =
+--tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --=
+tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale=
+: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opaci=
+ty: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ;=
+ --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; }
+
+::backdrop { --tw-border-spacing-x: 0; --tw-border-spacing-y: 0; --tw-trans=
+late-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y=
+: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pin=
+ch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-posit=
+ion: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordi=
+nal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; =
+--tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --=
+tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ri=
+ng-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 =
+#0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw=
+-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-satur=
+ate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdro=
+p-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-b=
+ackdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw=
+-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-cont=
+ain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; }
+
+*, ::after, ::before { box-sizing: border-box; border-width: 0px; border-st=
+yle: solid; border-color: rgb(229, 231, 235); }
+
+::after, ::before { --tw-content: ''; }
+
+:host, html { line-height: 1.5; text-size-adjust: 100%; tab-size: 4; font-f=
+amily: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI=
+ Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-feature-settings: norm=
+al; font-variation-settings: normal; -webkit-tap-highlight-color: transpare=
+nt; }
+
+body { margin: 0px; line-height: inherit; }
+
+hr { height: 0px; color: inherit; border-top-width: 1px; }
+
+abbr:where([title]) { text-decoration: underline dotted; }
+
+h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+
+a { color: inherit; text-decoration: inherit; }
+
+b, strong { font-weight: bolder; }
+
+code, kbd, pre, samp { font-family: ui-monospace, SFMono-Regular, Menlo, Mo=
+naco, Consolas, "Liberation Mono", "Courier New", monospace; font-feature-s=
+ettings: normal; font-variation-settings: normal; font-size: 1em; }
+
+small { font-size: 80%; }
+
+sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-ali=
+gn: baseline; }
+
+sub { bottom: -0.25em; }
+
+sup { top: -0.5em; }
+
+table { text-indent: 0px; border-color: inherit; border-collapse: collapse;=
+ }
+
+button, input, optgroup, select, textarea { font-family: inherit; font-feat=
+ure-settings: inherit; font-variation-settings: inherit; font-size: 100%; f=
+ont-weight: inherit; line-height: inherit; letter-spacing: inherit; color: =
+inherit; margin: 0px; padding: 0px; }
+
+button, select { text-transform: none; }
+
+button, input:where([type=3D"button"]), input:where([type=3D"reset"]), inpu=
+t:where([type=3D"submit"]) { appearance: button; background-color: transpar=
+ent; background-image: none; }
+
+progress { vertical-align: baseline; }
+
+::-webkit-inner-spin-button, ::-webkit-outer-spin-button { height: auto; }
+
+[type=3D"search"] { appearance: textfield; outline-offset: -2px; }
+
+::-webkit-search-decoration { appearance: none; }
+
+::-webkit-file-upload-button { appearance: button; font: inherit; }
+
+summary { display: list-item; }
+
+blockquote, dd, dl, figure, h1, h2, h3, h4, h5, h6, hr, p, pre { margin: 0p=
+x; }
+
+fieldset { margin: 0px; padding: 0px; }
+
+legend { padding: 0px; }
+
+menu, ol, ul { list-style: none; margin: 0px; padding: 0px; }
+
+dialog { padding: 0px; }
+
+textarea { resize: vertical; }
+
+input::placeholder, textarea::placeholder { opacity: 1; color: rgb(156, 163=
+, 175); }
+
+[role=3D"button"], button { cursor: pointer; }
+
+:disabled { cursor: default; }
+
+audio, canvas, embed, iframe, img, object, svg, video { display: block; ver=
+tical-align: middle; }
+
+img, video { max-width: 100%; height: auto; }
+
+[hidden]:where(:not([hidden=3D"until-found"])) { display: none; }
+
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+.mb-2 { margin-bottom: 0.5rem; }
+
+.mt-1 { margin-top: 0.25rem; }
+
+.mt-2 { margin-top: 0.5rem; }
+
+.mt-3 { margin-top: 0.75rem; }
+
+.inline-block { display: inline-block; }
+
+.flex { display: flex; }
+
+.inline-flex { display: inline-flex; }
+
+.grid { display: grid; }
+
+.h-0 { height: 0px; }
+
+.h-3 { height: 0.75rem; }
+
+.h-5 { height: 1.25rem; }
+
+.h-7 { height: 1.75rem; }
+
+.w-4 { width: 1rem; }
+
+.max-w-5xl { max-width: 64rem; }
+
+.flex-1 { flex: 1 1 0%; }
+
+.shrink-0 { flex-shrink: 0; }
+
+.list-inside { list-style-position: inside; }
+
+.list-disc { list-style-type: disc; }
+
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0px, 1fr)); }
+
+.flex-col { flex-direction: column; }
+
+.flex-wrap { flex-wrap: wrap; }
+
+.items-start { align-items: flex-start; }
+
+.items-center { align-items: center; }
+
+.justify-center { justify-content: center; }
+
+.justify-between { justify-content: space-between; }
+
+.gap-1\.5 { gap: 0.375rem; }
+
+.gap-2 { gap: 0.5rem; }
+
+.gap-3 { gap: 0.75rem; }
+
+.gap-4 { gap: 1rem; }
+
+.space-y-1 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; mar=
+gin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom=
+: calc(0.25rem * var(--tw-space-y-reverse)); }
+
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; =
+margin-top: calc(0.375rem * calc(1 - var(--tw-space-y-reverse))); margin-bo=
+ttom: calc(0.375rem * var(--tw-space-y-reverse)); }
+
+.space-y-12 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; ma=
+rgin-top: calc(3rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom: =
+calc(3rem * var(--tw-space-y-reverse)); }
+
+.space-y-14 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; ma=
+rgin-top: calc(3.5rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom=
+: calc(3.5rem * var(--tw-space-y-reverse)); }
+
+.space-y-3 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; mar=
+gin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom=
+: calc(0.75rem * var(--tw-space-y-reverse)); }
+
+.space-y-5 > :not([hidden]) ~ :not([hidden]) { --tw-space-y-reverse: 0; mar=
+gin-top: calc(1.25rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom=
+: calc(1.25rem * var(--tw-space-y-reverse)); }
+
+.rounded { border-radius: 0.25rem; }
+
+.rounded-full { border-radius: 9999px; }
+
+.rounded-lg { border-radius: 0.5rem; }
+
+.rounded-sm { border-radius: 0.125rem; }
+
+.rounded-xl { border-radius: 0.75rem; }
+
+.border { border-width: 1px; }
+
+.border-b { border-bottom-width: 1px; }
+
+.border-l-4 { border-left-width: 4px; }
+
+.border-t-2 { border-top-width: 2px; }
+
+.border-dashed { border-style: dashed; }
+
+.border-emerald-400 { --tw-border-opacity: 1; border-color: rgb(52 211 153 =
+/ var(--tw-border-opacity, 1)); }
+
+.border-red-300 { --tw-border-opacity: 1; border-color: rgb(252 165 165 / v=
+ar(--tw-border-opacity, 1)); }
+
+.border-red-400 { --tw-border-opacity: 1; border-color: rgb(248 113 113 / v=
+ar(--tw-border-opacity, 1)); }
+
+.border-red-500 { --tw-border-opacity: 1; border-color: rgb(239 68 68 / var=
+(--tw-border-opacity, 1)); }
+
+.border-red-600 { --tw-border-opacity: 1; border-color: rgb(220 38 38 / var=
+(--tw-border-opacity, 1)); }
+
+.border-slate-200 { --tw-border-opacity: 1; border-color: rgb(226 232 240 /=
+ var(--tw-border-opacity, 1)); }
+
+.border-slate-300 { --tw-border-opacity: 1; border-color: rgb(203 213 225 /=
+ var(--tw-border-opacity, 1)); }
+
+.border-slate-400 { --tw-border-opacity: 1; border-color: rgb(148 163 184 /=
+ var(--tw-border-opacity, 1)); }
+
+.border-slate-600 { --tw-border-opacity: 1; border-color: rgb(71 85 105 / v=
+ar(--tw-border-opacity, 1)); }
+
+.bg-amber-100 { --tw-bg-opacity: 1; background-color: rgb(254 243 199 / var=
+(--tw-bg-opacity, 1)); }
+
+.bg-emerald-100 { --tw-bg-opacity: 1; background-color: rgb(209 250 229 / v=
+ar(--tw-bg-opacity, 1)); }
+
+.bg-emerald-200 { --tw-bg-opacity: 1; background-color: rgb(167 243 208 / v=
+ar(--tw-bg-opacity, 1)); }
+
+.bg-red-200 { --tw-bg-opacity: 1; background-color: rgb(254 202 202 / var(-=
+-tw-bg-opacity, 1)); }
+
+.bg-red-300 { --tw-bg-opacity: 1; background-color: rgb(252 165 165 / var(-=
+-tw-bg-opacity, 1)); }
+
+.bg-red-50 { --tw-bg-opacity: 1; background-color: rgb(254 242 242 / var(--=
+tw-bg-opacity, 1)); }
+
+.bg-slate-100 { --tw-bg-opacity: 1; background-color: rgb(241 245 249 / var=
+(--tw-bg-opacity, 1)); }
+
+.bg-slate-200 { --tw-bg-opacity: 1; background-color: rgb(226 232 240 / var=
+(--tw-bg-opacity, 1)); }
+
+.bg-slate-50 { --tw-bg-opacity: 1; background-color: rgb(248 250 252 / var(=
+--tw-bg-opacity, 1)); }
+
+.bg-stone-50 { --tw-bg-opacity: 1; background-color: rgb(250 250 249 / var(=
+--tw-bg-opacity, 1)); }
+
+.bg-white { --tw-bg-opacity: 1; background-color: rgb(255 255 255 / var(--t=
+w-bg-opacity, 1)); }
+
+.p-1\.5 { padding: 0.375rem; }
+
+.p-2 { padding: 0.5rem; }
+
+.p-3 { padding: 0.75rem; }
+
+.p-4 { padding: 1rem; }
+
+.p-8 { padding: 2rem; }
+
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+
+.px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+
+.py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+
+.py-12 { padding-top: 3rem; padding-bottom: 3rem; }
+
+.pb-2 { padding-bottom: 0.5rem; }
+
+.pl-3 { padding-left: 0.75rem; }
+
+.pt-1 { padding-top: 0.25rem; }
+
+.pt-2 { padding-top: 0.5rem; }
+
+.text-center { text-align: center; }
+
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Cons=
+olas, "Liberation Mono", "Courier New", monospace; }
+
+.font-sans { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Colo=
+r Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
+
+.font-serif { font-family: ui-serif, Georgia, Cambria, "Times New Roman", T=
+imes, serif; }
+
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+
+.text-\[10px\] { font-size: 10px; }
+
+.text-\[11px\] { font-size: 11px; }
+
+.text-\[9px\] { font-size: 9px; }
+
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+
+.font-medium { font-weight: 500; }
+
+.font-semibold { font-weight: 600; }
+
+.uppercase { text-transform: uppercase; }
+
+.italic { font-style: italic; }
+
+.leading-relaxed { line-height: 1.625; }
+
+.leading-tight { line-height: 1.25; }
+
+.tracking-wider { letter-spacing: 0.05em; }
+
+.text-amber-800 { --tw-text-opacity: 1; color: rgb(146 64 14 / var(--tw-tex=
+t-opacity, 1)); }
+
+.text-emerald-800 { --tw-text-opacity: 1; color: rgb(6 95 70 / var(--tw-tex=
+t-opacity, 1)); }
+
+.text-red-600 { --tw-text-opacity: 1; color: rgb(220 38 38 / var(--tw-text-=
+opacity, 1)); }
+
+.text-red-700 { --tw-text-opacity: 1; color: rgb(185 28 28 / var(--tw-text-=
+opacity, 1)); }
+
+.text-slate-300 { --tw-text-opacity: 1; color: rgb(203 213 225 / var(--tw-t=
+ext-opacity, 1)); }
+
+.text-slate-400 { --tw-text-opacity: 1; color: rgb(148 163 184 / var(--tw-t=
+ext-opacity, 1)); }
+
+.text-slate-500 { --tw-text-opacity: 1; color: rgb(100 116 139 / var(--tw-t=
+ext-opacity, 1)); }
+
+.text-slate-600 { --tw-text-opacity: 1; color: rgb(71 85 105 / var(--tw-tex=
+t-opacity, 1)); }
+
+.text-slate-700 { --tw-text-opacity: 1; color: rgb(51 65 85 / var(--tw-text=
+-opacity, 1)); }
+
+.text-slate-900 { --tw-text-opacity: 1; color: rgb(15 23 42 / var(--tw-text=
+-opacity, 1)); }
+
+.text-white { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-=
+opacity, 1)); }
+
+.underline { text-decoration-line: underline; }
+
+.decoration-slate-500 { text-decoration-color: rgb(100, 116, 139); }
+
+.underline-offset-4 { text-underline-offset: 4px; }
+
+.shadow-sm { --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); --tw-shadow-colore=
+d: 0 1px 2px 0 var(--tw-shadow-color); box-shadow: var(--tw-ring-offset-sha=
+dow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow); }
+
+@media (min-width: 768px) {
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0px, 1fr)); }
+}
+------MultipartBoundary--GvtCEdxnQBEQ0rUtGHwMyqTcVeEQrL0c3hXsZswgIM----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: cid:css-60348f70-a11d-4fef-96e5-6d6598fb7693@mhtml.blink
+
+@charset "utf-8";
+
+.seam { border-style: dashed; }
+
+.deep-box { background: linear-gradient(135deg, rgb(15, 23, 42), rgb(30, 41=
+, 59)); }
+
+.faded { opacity: 0.55; }
+------MultipartBoundary--GvtCEdxnQBEQ0rUtGHwMyqTcVeEQrL0c3hXsZswgIM------
