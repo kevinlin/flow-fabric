@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import type { InstanceStore } from '../engine-host/store.js';
 import type { EngineHost } from '../engine-host/engine-host.js';
+import type { Events } from '../events/events.js';
 import type { Inbox } from '../inbox/inbox.js';
 import { DefinitionNotFoundError, DefinitionInUseError, type DefinitionStore } from '../definitions/store.js';
 import type { GrillHost } from '../grill/session.js';
@@ -26,13 +27,14 @@ export interface ApiDeps {
   store: InstanceStore;
   host: EngineHost;
   inbox: Inbox;
+  events: Events;
   definitions?: DefinitionStore;
   grill?: GrillHost;
   logRing?: LogRing;
   webRoot?: string;
 }
 
-export function buildApi({ store, host, inbox, definitions, grill, logRing, webRoot }: ApiDeps): FastifyInstance {
+export function buildApi({ store, host, inbox, events, definitions, grill, logRing, webRoot }: ApiDeps): FastifyInstance {
   const app = Fastify(
     logRing ? { logger: { level: 'info', stream: logRing } } : {},
   );
@@ -158,10 +160,10 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing, webR
       connection: 'keep-alive',
     });
     reply.raw.write(': connected\n\n');
-    const unsubscribe = store.onEvent((event) => {
-      if (instanceId && event.instanceId !== instanceId) return;
-      reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
-    });
+    const unsubscribe = events.subscribe(
+      (event) => reply.raw.write(`data: ${JSON.stringify(event)}\n\n`),
+      { instanceId },
+    );
     req.raw.on('close', () => {
       unsubscribe();
       reply.raw.end();

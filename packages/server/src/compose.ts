@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { InstanceStore } from './engine-host/store.js';
 import { EngineHost } from './engine-host/engine-host.js';
 import type { RunnerSet } from './engine-host/dispatch.js';
+import { Events } from './events/events.js';
 import { Inbox } from './inbox/inbox.js';
 import type { Notifier } from './notify/notifier.js';
 import { DefinitionStore } from './definitions/store.js';
@@ -31,6 +32,7 @@ export interface DaemonOptions {
 
 export interface Daemon {
   store: InstanceStore;
+  events: Events;
   host: EngineHost;
   inbox: Inbox;
   definitions: DefinitionStore;
@@ -47,10 +49,10 @@ export function createDaemon(opts: DaemonOptions): Daemon {
   const dbPath = path.join(dataDir, 'flow-fabric.db');
 
   const telemetry = opts.telemetry ?? NOOP_TELEMETRY;
-  // Deliberate asymmetry: the store only gets telemetry when one was injected —
-  // passing NOOP_TELEMETRY would make every terminal setStatus pay the
-  // payload-assembly SELECTs for spans nobody exports.
-  const store = new InstanceStore(dbPath, opts.telemetry ? { telemetry: opts.telemetry } : {});
+  const store = new InstanceStore(dbPath);
+  // The events module is the single write path + telemetry driver; the enabled
+  // gate keeps a NOOP telemetry from paying the span-assembly SELECTs.
+  const events = new Events(store, telemetry);
   const definitions = new DefinitionStore(dbPath);
   const notifier: Notifier = opts.notifier ?? { notify: async () => {} };
   // two-phase wiring: inbox needs host, host needs inbox's handleWait
@@ -58,10 +60,11 @@ export function createDaemon(opts: DaemonOptions): Daemon {
   const host = new EngineHost(store, {
     dataDir,
     notifier,
+    events,
     onUserTaskWait: (info) => inbox.handleWait(info),
     ...(opts.runners ? { runners: opts.runners } : {}),
   });
-  inbox = new Inbox(store, host, notifier);
+  inbox = new Inbox(store, host, notifier, events);
   // Without an explicit queryFn, GrillSession would fall back to the live SDK
   // — an inert daemon must fail fast instead.
   const failFastQueryFn: AgentQueryFn = () => {
@@ -69,10 +72,11 @@ export function createDaemon(opts: DaemonOptions): Daemon {
   };
   const grill = new GrillHost({ definitions, queryFn: opts.grillQueryFn ?? failFastQueryFn });
   const logRing = new LogRing();
-  const app = buildApi({ store, host, inbox, definitions, grill, logRing, webRoot: opts.webRoot });
+  const app = buildApi({ store, host, inbox, events, definitions, grill, logRing, webRoot: opts.webRoot });
 
   return {
     store,
+    events,
     host,
     inbox,
     definitions,

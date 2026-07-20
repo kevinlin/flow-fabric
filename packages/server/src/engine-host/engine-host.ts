@@ -9,6 +9,7 @@ import { createDispatch, type RunnerSet } from './dispatch.js';
 import { makeLadderRunTask, type Hold } from './failure.js';
 import type { Notifier } from '../notify/notifier.js';
 import { validateOutput } from '../runners/validate.js';
+import { Events } from '../events/events.js';
 
 const SNAPSHOT_EVENTS = ['activity.start', 'activity.wait', 'activity.timer', 'activity.end'];
 const TIMER_CLEAR_EVENTS = ['activity.timeout', 'activity.end', 'activity.error'];
@@ -34,6 +35,9 @@ export interface EngineHostOptions {
   dataDir?: string;
   onUserTaskWait?: (info: UserTaskWaitInfo) => void;
   notifier?: Notifier;
+  /** Shared events module (single write path + telemetry). Defaults to an inert
+   * Events over the same store so standalone EngineHost tests need no wiring. */
+  events?: Events;
 }
 
 interface RunningEntry {
@@ -61,8 +65,11 @@ export class EngineHost {
   private aborting = new Set<string>();
   private terminated = new Set<string>();
   private timers = new Map<string, ArmedTimer>();
+  private events: Events;
 
-  constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {}
+  constructor(private store: InstanceStore, private opts: EngineHostOptions = {}) {
+    this.events = opts.events ?? new Events(store);
+  }
 
   /** Armed duration timers across all running instances (FR-25 scheduler view). */
   scheduledTimers(): ArmedTimer[] {
@@ -149,9 +156,13 @@ export class EngineHost {
   async abort(instanceId: string): Promise<void> {
     const entry = this.running.get(instanceId);
     this.aborting.add(instanceId);
-    this.store.appendEvent(instanceId, 'instance.aborted');
+    this.events.append({ instanceId, type: 'instance.aborted' });
     if (entry) await entry.engine.stop();
     this.store.setStatus(instanceId, 'aborted');
+    // Parity with the old store-side telemetry side-effect: fire here too so an
+    // abort with no live engine in this host still ends the span. The dedup Set
+    // makes the run()-side call a no-op when the engine was running.
+    this.events.instanceEnded(instanceId, 'aborted');
   }
 
   /** Resolve an open incident: retry | skip | abort (design §6.3). */
@@ -168,7 +179,7 @@ export class EngineHost {
 
     if (action === 'abort') {
       this.store.resolveIncident(incidentId, 'abort');
-      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'abort');
+      this.events.append({ instanceId: incident.instanceId, type: 'incident.resolved', elementId: incident.nodeId, detail: 'abort' });
       this.holds.delete(key);
       await this.abort(incident.instanceId);
       return;
@@ -176,7 +187,7 @@ export class EngineHost {
     if (action === 'skip') {
       validateOutput(hold.contract.outputSchema, output ?? {}); // throws → incident stays open
       this.store.resolveIncident(incidentId, 'skip');
-      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'skip');
+      this.events.append({ instanceId: incident.instanceId, type: 'incident.resolved', elementId: incident.nodeId, detail: 'skip' });
       this.store.setStatus(incident.instanceId, 'running');
       Object.assign(hold.environment.variables, output);
       hold.release(output ?? {});
@@ -186,11 +197,11 @@ export class EngineHost {
     try {
       const result = await hold.attempt();
       this.store.resolveIncident(incidentId, 'retry');
-      this.store.appendEvent(incident.instanceId, 'incident.resolved', incident.nodeId, 'retry');
+      this.events.append({ instanceId: incident.instanceId, type: 'incident.resolved', elementId: incident.nodeId, detail: 'retry' });
       this.store.setStatus(incident.instanceId, 'running');
       hold.release(result);
     } catch (err) {
-      this.store.appendEvent(incident.instanceId, 'task.attempt-failed', incident.nodeId, String(err));
+      this.events.append({ instanceId: incident.instanceId, type: 'task.attempt-failed', elementId: incident.nodeId, detail: String(err) });
       throw err;
     }
   }
@@ -217,6 +228,7 @@ export class EngineHost {
       profile,
       runners,
       store: this.store,
+      events: this.events,
     };
     // The failure ladder replaces the single-attempt seam for every instance
     // (dry-run stub path included), so incidents work in dry runs too.
@@ -260,7 +272,7 @@ export class EngineHost {
     };
     for (const event of SNAPSHOT_EVENTS) {
       listener.on(event, (api: { id: string }) => {
-        this.store.appendEvent(id, event, api.id);
+        this.events.append({ instanceId: id, type: event, elementId: api.id });
         if (this.profiles.get(id)?.terminateEnds.has(api.id)) this.terminated.add(id);
         snapshot();
         if (event === 'activity.timer') {
@@ -298,19 +310,23 @@ export class EngineHost {
       const state = await engine.getState();
       this.store.saveEngineState(id, JSON.stringify(state));
       if (result === 'end') {
-        this.store.setStatus(id, this.terminated.delete(id) ? 'terminated' : 'completed');
+        const status = this.terminated.delete(id) ? 'terminated' : 'completed';
+        this.store.setStatus(id, status);
+        this.events.instanceEnded(id, status);
       } else if (this.aborting.has(id)) {
         this.store.setStatus(id, 'aborted');
         this.aborting.delete(id);
+        this.events.instanceEnded(id, 'aborted');
       } else if (this.store.getInstance(id)?.status === 'running') {
         // A held incident keeps its 'incident' status across a stop.
         this.store.setStatus(id, 'stopped');
       }
-      this.store.appendEvent(id, `engine.${result}`);
+      this.events.append({ instanceId: id, type: `engine.${result}` });
     } catch (err) {
       await queue;
       this.store.setStatus(id, 'error');
-      this.store.appendEvent(id, 'engine.error', undefined, String(err));
+      this.events.instanceEnded(id, 'error');
+      this.events.append({ instanceId: id, type: 'engine.error', detail: String(err) });
       throw err;
     } finally {
       for (const key of this.timers.keys()) if (key.startsWith(`${id}:`)) this.timers.delete(key);

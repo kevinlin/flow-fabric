@@ -1,6 +1,7 @@
 import type { AgentTaskContract, CodeTaskContract } from '@flowfabric/shared';
 import type { ProcessProfile } from '../profile/read.js';
 import type { InstanceStore } from './store.js';
+import type { Events } from '../events/events.js';
 import type { TaskRunner } from '../runners/types.js';
 import { validateOutput } from '../runners/validate.js';
 
@@ -27,6 +28,8 @@ export interface DispatchDeps {
   runners: RunnerSet;
   /** Set by EngineHost; when present, each attempt is recorded in task_executions (FR-14). */
   store?: InstanceStore;
+  /** Set by EngineHost; drives the task-execution telemetry span after each attempt. */
+  events?: Events;
   /** Overridden by the failure ladder. Default: one attempt, validate, throw on failure. */
   runTask?: RunTaskFn;
 }
@@ -79,10 +82,14 @@ export function makeSingleAttemptRunTask(deps: DispatchDeps): RunTaskFn {
           costUsd: result.costUsd,
           transcriptPath: result.transcriptPath,
         });
+        deps.events?.taskExecution(recId);
       }
       return result.output;
     } catch (err) {
-      if (recId !== undefined) deps.store!.finishTaskExecution(recId, { status: 'failed', error: String(err) });
+      if (recId !== undefined) {
+        deps.store!.finishTaskExecution(recId, { status: 'failed', error: String(err) });
+        deps.events?.taskExecution(recId);
+      }
       throw err;
     } finally {
       clearTimeout(timer);

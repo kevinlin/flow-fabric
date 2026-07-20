@@ -63,6 +63,8 @@ Each module has one purpose and a defined interface; dependencies point inward t
 
 **Composition-root amendment (2026-07-20).** The Daemon graph is wired in exactly one place: `compose.ts` (`createDaemon`). Its defaults are inert — no-op notifier, stub-runner dry-run path, NOOP telemetry, fail-fast grill queryFn — so a bare `createDaemon({ dataDir })` can never notify, call the Claude SDK, or export telemetry. `daemon.ts` is the process entrypoint and the only site constructing production adapters (`AgentRunner`/`CodeRunner`, `MacNotifier`, `initTelemetry()`, the SDK grill queryFn, webRoot); tests build the same graph and override only the adapter they assert on. `Daemon.close()` owns the teardown order: stop engines (awaiting in-flight runs) → close API → flush telemetry → close stores; it is idempotent.
 
+**Events-module amendment (2026-07-20).** The `events` module (row above) is now built as its own module in `events/events.ts` (`Events`). M4 had folded its jobs into `InstanceStore`; this change extracts them so the code matches the named seam. Its interface is `append(event)` + `subscribe(listener, filter?)` — the two the row names — plus three telemetry-driver methods that concentrate span-payload assembly and terminal-transition dedup: `instanceEnded(instanceId, status)`, `taskExecution(recId)`, `incidentRaised(nodeId)`. Three adapters sit at the seam: SQLite persistence (`InstanceStore`, reached through a narrow `EventStore` port — `insertEvent`/`listEvents`/`getInstance`/`getTaskExecution`), the SSE stream, and OTel spans+metrics (`Telemetry`, gated on `telemetry.enabled` so a NOOP run never pays the assembly SELECTs). `InstanceStore` is now pure persistence — no `EventEmitter`, no `{telemetry?}` option; `appendEvent` became `insertEvent` (INSERT, returns seq, no fan-out) and `setStatus` is a plain UPDATE. `EngineHost` holds the `events` reference (via `EngineHostOptions.events`, defaulting to an inert `Events` over the same store) and fires `events.instanceEnded` on terminal transitions; `compose.ts` constructs the one shared `Events` and injects it into host, inbox, and the API.
+
 ## 4. Flow Fabric BPMN profile
 
 ### 4.1 Actor mapping (FR-5)
@@ -182,7 +184,7 @@ REST (all under `/api`):
 - `GET /inbox` (user tasks + incidents), `POST /user-tasks/:id/submit`, `POST /incidents/:id/resolve` `{action, output?}`
 - `GET /metrics/definitions/:id` (aggregates), `GET /healthz`, `GET /scheduler` (next timer firings, FR-25)
 
-SSE: `GET /api/events?instanceId=...`. Event types: `instance.started/completed/terminated/aborted`, `task.started/completed/failed`, `token.moved`, `timer.armed/fired`, `incident.raised/resolved`, `usertask.created/submitted`, `grill.op-applied`, `lint.updated`.
+SSE: `GET /api/events?instanceId=...`, now served by `events.subscribe(listener, { instanceId })` (the `instanceId` query drives the subscribe filter), not `store.onEvent`. Vocabulary unchanged: `instance.started/completed/terminated/aborted`, `task.started/completed/failed`, `token.moved`, `timer.armed/fired`, `incident.raised/resolved`, `usertask.created/submitted`, `grill.op-applied`, `lint.updated`.
 
 ## 9. Web UI
 
@@ -192,7 +194,7 @@ Forms are rendered from JSON Schema (`@rjsf` or equivalent); complex inputs (fil
 
 ## 10. Observability internals
 
-- Every event append emits an OTel span/event: trace per instance, span per task execution, attributes: node id, actor, attempt, token usage, cost (FR-24).
+- The `events` module is the single place that drives OTel — it owns span-payload assembly and terminal-transition dedup, rather than the persistence layer. Trace per instance, span per task execution, attributes: node id, actor, attempt, token usage, cost (FR-24). Emission is gated on `telemetry.enabled`, so a NOOP run drives no spans and pays none of the assembly reads.
 - Metrics: counters (task success/failure, incidents), histograms (task + run duration, cost). OTLP exporter config-gated; off by default.
 - Structured platform logs (pino) separate from workflow events (FR-25).
 
@@ -205,6 +207,7 @@ Forms are rendered from JSON Schema (`@rjsf` or equivalent); complex inputs (fil
 | Engine-host | Kill-and-resume: start instance with timer, kill process, restart, assert timer fires at original schedule (risk #1) |
 | Runners | Contract tests per runner; agent runner against a mock SDK transport |
 | Failure ladder | Simulated failures at each rung: retry exhaustion → boundary routing → incident lifecycle |
+| Events | `append`/`subscribe` fan-out (filter, unsubscribe) + span assertions via a fake `Telemetry` injected into `Events` (`events.test.ts`) — replaces the old store↔telemetry coupling test |
 | E2E | Refined rfp-daily completes a full dry-run daily cycle; interview-process imports and lints without execution (G2) |
 | Composition | `compose.test.ts`: inert defaults end-to-end (dry run over HTTP, grill fails fast without a queryFn), `close()` teardown order + idempotence, close-immediately-after-start settles the run |
 
