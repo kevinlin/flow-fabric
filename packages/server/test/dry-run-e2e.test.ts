@@ -3,11 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { describe, it, expect, afterEach } from 'vitest';
-import { InstanceStore } from '../src/engine-host/store.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
-import { DefinitionStore } from '../src/definitions/store.js';
-import { buildApi } from '../src/api/server.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 
 const refined = readFileSync(new URL('./fixtures/daily-loop-refined.bpmn', import.meta.url), 'utf8');
 const tmp = () => mkdtempSync(path.join(os.tmpdir(), 'ff-spike-'));
@@ -21,15 +17,15 @@ async function until<T>(fn: () => T | undefined | false): Promise<T> {
   throw new Error('condition not reached');
 }
 
+const daemons: Daemon[] = [];
+afterEach(async () => {
+  for (const d of daemons.splice(0)) await d.close();
+});
+
 function build() {
-  const dir = tmp();
-  const store = new InstanceStore(path.join(dir, 'ff.db'));
-  const definitions = new DefinitionStore(path.join(dir, 'ff.db'));
-  let inbox!: Inbox;
-  const host = new EngineHost(store, { dataDir: dir, onUserTaskWait: (i) => inbox.handleWait(i) });
-  inbox = new Inbox(store, host, { notify: async () => {} });
-  const app = buildApi({ store, host, inbox, definitions });
-  return { store, definitions, inbox, app };
+  const d = createDaemon({ dataDir: tmp() });
+  daemons.push(d);
+  return d;
 }
 
 async function startFromVersion(app: any, payload: Record<string, unknown>): Promise<string> {
@@ -46,12 +42,9 @@ async function startFromVersion(app: any, payload: Record<string, unknown>): Pro
 }
 
 describe('dry-run E2E of the refined daily loop (impl M3.6 mechanics)', () => {
-  const stores: Array<{ close(): void }> = [];
-  afterEach(() => stores.forEach((s) => s.close()));
 
   it('init branch: stub sends token to user task, then terminate end -> status terminated', async () => {
     const { store, inbox, app } = build();
-    stores.push(store);
     // stub default for containsInitializer is false -> init branch
     const id = await startFromVersion(app, {
       workspacePath: tmp(), dryRun: true, inputs: { submissionDeadline: '2026-08-01' },
@@ -69,7 +62,6 @@ describe('dry-run E2E of the refined daily loop (impl M3.6 mechanics)', () => {
 
   it('audit loop: override steers past init, user task steers the loop, 2nd iteration reached (dry-run cycle)', async () => {
     const { store, inbox, app } = build();
-    stores.push(store);
     const id = await startFromVersion(app, {
       workspacePath: tmp(), dryRun: true,
       inputs: { submissionDeadline: '2026-08-01' },

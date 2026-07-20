@@ -54,6 +54,8 @@ function missingRunners(): RunnerSet {
 
 export class EngineHost {
   private running = new Map<string, RunningEntry>();
+  private inflight = new Set<Promise<void>>();
+  private stopping = false;
   private profiles = new Map<string, ProcessProfile>();
   private holds = new Map<string, Hold>();
   private aborting = new Set<string>();
@@ -90,7 +92,7 @@ export class EngineHost {
       definitionId: opts.definitionId,
       versionNo: opts.versionNo,
     });
-    return this.startEngine(opts);
+    return this.track(this.startEngine(opts));
   }
 
   private async startEngine(opts: {
@@ -114,14 +116,22 @@ export class EngineHost {
       const components = await this.engineComponents(row);
       const engine = new Engine().recover(JSON.parse(row.engineState!), components as EngineOptions);
       this.store.setStatus(row.id, 'running');
-      out.push({ id: row.id, completion: this.run(row.id, engine, 'resume') });
+      out.push({ id: row.id, completion: this.track(this.run(row.id, engine, 'resume')) });
     }
     return out;
   }
 
-  /** Stop all running engines (final state snapshot is taken by run()). */
+  /** Stop all running engines and wait until every run has settled (final
+   * state snapshot is taken by run()) — after this resolves, no engine writes
+   * are in flight, so callers may safely close the store. */
   async stopAll(): Promise<void> {
-    await Promise.all([...this.running.values()].map((entry) => entry.engine.stop()));
+    this.stopping = true;
+    try {
+      await Promise.all([...this.running.values()].map((entry) => entry.engine.stop()));
+      await Promise.allSettled([...this.inflight]);
+    } finally {
+      this.stopping = false;
+    }
   }
 
   /** Resume a waiting user task, merging vars into process variables. */
@@ -220,6 +230,17 @@ export class EngineHost {
     return { extensions, scripts, moddleOptions: { flowfabric: flowfabricModdle } };
   }
 
+  /** Registers a whole start/resume chain so stopAll() can await runs whose
+   * engine hasn't registered yet (engineComponents/execute() still pending) —
+   * otherwise a stop in that window misses the engine and the caller closes
+   * the store under a live run. Must be applied synchronously at the seam the
+   * caller enters (start/resumeAll), not inside run(). */
+  private track(p: Promise<void>): Promise<void> {
+    const tracked: Promise<void> = p.finally(() => this.inflight.delete(tracked));
+    this.inflight.add(tracked);
+    return tracked;
+  }
+
   private async run(
     id: string,
     engine: InstanceType<typeof Engine>,
@@ -271,6 +292,7 @@ export class EngineHost {
           ? await engine.execute({ listener, variables })
           : await engine.resume({ listener });
       this.running.set(id, { engine, execution });
+      if (this.stopping) await engine.stop(); // stopAll() ran before we registered
       const result = await outcome;
       await queue;
       const state = await engine.getState();

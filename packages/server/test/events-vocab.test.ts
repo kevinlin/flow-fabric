@@ -3,23 +3,21 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { describe, it, expect, afterEach } from 'vitest';
-import { InstanceStore } from '../src/engine-host/store.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 
 const contracts = readFileSync(new URL('./fixtures/contracts.bpmn', import.meta.url), 'utf8');
 const tmp = () => mkdtempSync(path.join(os.tmpdir(), 'ff-spike-'));
 
 describe('SSE event vocabulary', () => {
-  const stores: InstanceStore[] = [];
-  afterEach(() => stores.forEach((s) => s.close()));
+  const daemons: Daemon[] = [];
+  afterEach(async () => {
+    for (const d of daemons.splice(0)) await d.close();
+  });
 
   it('emits usertask.created and usertask.submitted', async () => {
-    const store = new InstanceStore(path.join(tmp(), 'ff.db'));
-    stores.push(store);
-    let inbox!: Inbox;
-    const host = new EngineHost(store, { onUserTaskWait: (i) => inbox.handleWait(i) });
-    inbox = new Inbox(store, host, { notify: async () => {} });
+    const d = createDaemon({ dataDir: tmp() });
+    daemons.push(d);
+    const { store, host, inbox } = d;
     const completion = host.start({ id: 'i1', name: 'c', source: contracts, workspace: tmp(), dryRun: true, variables: { deadline: 'x' } });
 
     let task: ReturnType<typeof inbox.listPending>[number] | undefined;

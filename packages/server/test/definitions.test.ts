@@ -3,15 +3,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, afterEach } from 'vitest';
 import { DefinitionStore, DefinitionNotFoundError, DefinitionInUseError } from '../src/definitions/store.js';
-import { InstanceStore } from '../src/engine-host/store.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
-import { buildApi } from '../src/api/server.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 
 const contracts = readFileSync(new URL('./fixtures/contracts.bpmn', import.meta.url), 'utf8');
 const RFP_PATH = new URL('../../../Input/bpmn/rfp-daily-routine.bpmn', import.meta.url);
 const INTERVIEW_PATH = new URL('../../../Input/bpmn/interview-process.bpmn', import.meta.url);
 const tmp = () => mkdtempSync(path.join(os.tmpdir(), 'ff-spike-'));
+
+const daemons: Daemon[] = [];
+afterEach(async () => {
+  for (const d of daemons.splice(0)) await d.close();
+});
 
 describe('DefinitionStore', () => {
   const stores: Array<{ close(): void }> = [];
@@ -73,14 +75,12 @@ describe('DefinitionStore', () => {
 
   it('throws DefinitionInUseError when instances reference the definition', () => {
     const dir = tmp();
-    const dbPath = path.join(dir, 'ff.db');
-    const defs = new DefinitionStore(dbPath);
-    const instanceStore = new InstanceStore(dbPath);
-    stores.push(defs, instanceStore);
+    const d = createDaemon({ dataDir: dir });
+    daemons.push(d);
+    const defs = d.definitions;
     const { id } = defs.upload('contracts', contracts);
     defs.setLintReport(id, 1, { findings: [], errorCount: 0, deployable: true });
-    const host = new EngineHost(instanceStore, { onUserTaskWait: () => {} });
-    const completion = host.start({
+    const completion = d.host.start({
       id: 'inst-1', name: 'test', source: contracts,
       workspace: dir, dryRun: true, definitionId: id, versionNo: 1,
     });
@@ -101,18 +101,10 @@ describe('DefinitionStore', () => {
 });
 
 describe('definitions API', () => {
-  const stores: Array<{ close(): void }> = [];
-  afterEach(() => stores.forEach((s) => s.close()));
-
   function build() {
-    const dir = tmp();
-    const store = new InstanceStore(path.join(dir, 'ff.db'));
-    const definitions = new DefinitionStore(path.join(dir, 'ff.db'));
-    stores.push(store, definitions);
-    let inbox!: Inbox;
-    const host = new EngineHost(store, { onUserTaskWait: (i) => inbox.handleWait(i) });
-    inbox = new Inbox(store, host, { notify: async () => {} });
-    return { app: buildApi({ store, host, inbox, definitions }), definitions };
+    const d = createDaemon({ dataDir: tmp() });
+    daemons.push(d);
+    return d;
   }
 
   it('uploads, lists, and fetches versions over HTTP', async () => {

@@ -1,3 +1,5 @@
+export { createDaemon } from './compose.js';
+export type { Daemon, DaemonOptions } from './compose.js';
 export { InstanceStore } from './engine-host/store.js';
 export type {
   InstanceRow,

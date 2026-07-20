@@ -3,9 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { describe, it, expect, afterEach } from 'vitest';
-import { InstanceStore } from '../src/engine-host/store.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 import type { RunResult, TaskRunner } from '../src/runners/types.js';
 
 const contracts = readFileSync(new URL('./fixtures/contracts.bpmn', import.meta.url), 'utf8');
@@ -14,18 +12,15 @@ const failure = readFileSync(new URL('./fixtures/failure.bpmn', import.meta.url)
 const tmp = () => mkdtempSync(path.join(os.tmpdir(), 'ff-spike-'));
 
 describe('task_executions timeline (FR-14)', () => {
-  const stores: InstanceStore[] = [];
-  afterEach(() => stores.forEach((s) => s.close()));
+  const daemons: Daemon[] = [];
+  afterEach(async () => {
+    for (const d of daemons.splice(0)) await d.close();
+  });
 
   it('records every step of a dry run with inputs, outputs, timing, actor', async () => {
-    const store = new InstanceStore(path.join(tmp(), 'ff.db'));
-    stores.push(store);
-    let inbox!: Inbox;
-    const host = new EngineHost(store, {
-      dataDir: tmp(),
-      onUserTaskWait: (info) => inbox.handleWait(info),
-    });
-    inbox = new Inbox(store, host, { notify: async () => {} });
+    const d = createDaemon({ dataDir: tmp() });
+    daemons.push(d);
+    const { store, host, inbox } = d;
 
     const running = host.start({
       id: 't1', name: 'contracts', source: contracts, workspace: tmp(),
@@ -52,8 +47,6 @@ describe('task_executions timeline (FR-14)', () => {
   });
 
   it('records one row per attempt, failed attempts with the error', async () => {
-    const store = new InstanceStore(path.join(tmp(), 'ff.db'));
-    stores.push(store);
     let calls = 0;
     const flaky: TaskRunner = {
       async run(): Promise<RunResult> {
@@ -62,7 +55,9 @@ describe('task_executions timeline (FR-14)', () => {
         return { output: { ok: true }, costUsd: 0.02, tokenUsage: { output_tokens: 9 } };
       },
     };
-    const host = new EngineHost(store, { dataDir: tmp(), runners: { agent: flaky, code: flaky } });
+    const d = createDaemon({ dataDir: tmp(), runners: { agent: flaky, code: flaky } });
+    daemons.push(d);
+    const { store, host } = d;
     await host.start({ id: 't2', name: 'failure', source: failure, workspace: tmp() });
 
     const rows = store.listTaskExecutions('t2');

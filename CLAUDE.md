@@ -18,14 +18,14 @@ Built (`packages/server/src/`, all exercised through tests — [index.ts](packag
 - `linter/` — pure `lint(xml)` deployability gate, rules FF001–FF006 (M3, design §4.3).
 - `patch-ops/` — `applyPatchOps`: typed moddle edits that never touch DI (M3, design §7.3).
 - `grill/` — `GrillHost`/`GrillSession`: Claude Agent SDK chat whose only mutating tool is `propose_patch_ops`, with a re-lint feedback loop (M3).
-- `inbox/`, `notify/` — user-task inbox + macOS notifier (deep-links to the inbox, `DEFAULT_INBOX_LINK`). `logs/ring.ts` — bounded pino ring buffer (M4). `api/server.ts` — Fastify REST + SSE, and serves the built SPA from `packages/web/dist` at `/` (API routes win; SPA fallback for history routes). `daemon.ts` — the process entrypoint.
+- `inbox/`, `notify/` — user-task inbox + macOS notifier (deep-links to the inbox, `DEFAULT_INBOX_LINK`). `logs/ring.ts` — bounded pino ring buffer (M4). `api/server.ts` — Fastify REST + SSE, and serves the built SPA from `packages/web/dist` at `/` (API routes win; SPA fallback for history routes). `compose.ts` — the composition root (`createDaemon`: wires the full graph with inert defaults, returns handles + `close()`); `daemon.ts` — the process entrypoint that injects the production adapters.
 - M4 server additions: instance→definition linkage (`definition_id`/`version_no` on `instances`, migration-guarded), `metricsForDefinition` + `GET /api/metrics/definitions/:id` (FR-23), armed-timer registry + `GET /api/scheduler` (FR-25), `GET /api/logs` (FR-25), `GET /api/definitions/:id/versions`, `GET /api/grill/sessions/:id`, `GET /api/task-executions/:id/transcript`, and the SSE vocabulary `usertask.created/submitted` + `incident.resolved`.
 - `packages/web/` — React 19 + Vite 7 SPA (M4): hash-routed six pages (Definitions, Refine, Instances+detail, Inbox, Dashboards, System). `bpmn-js` NavigatedViewer render + token overlay, native `EventSource` SSE, a hand-rolled `SchemaForm` (flat JSON-Schema + raw-JSON escape hatch), typed API client over `@flowfabric/shared` DTOs. Pure libs (`node-status`, `instance-view`, `chat`, `logs`) are unit-tested; components via `@testing-library/react` + jsdom.
 - `packages/shared/src/` — profile types, moddle descriptor (`flowfabricModdle`), lint rule ids/types, and `api/types.ts` DTOs (M4) consumed by web and pinned by the server.
 
 Not built (still spec — don't assume they exist): OTel traces/metrics + soak (M5).
 
-**Daemon entrypoint:** `pnpm --filter @flowfabric/server dev` boots [daemon.ts](packages/server/src/daemon.ts) — wires store + host + inbox + notifier + definitions + grill + API, calls `resumeAll()`, and listens on `FF_PORT` (default 4400), data dir `FF_DATA_DIR` (default `~/.flow-fabric`). M1's go/no-go gate on `bpmn-engine` passed (verdict GO).
+**Daemon entrypoint:** `pnpm --filter @flowfabric/server dev` boots [daemon.ts](packages/server/src/daemon.ts) — injects the production adapters (runners, `MacNotifier`, `initTelemetry()`, webRoot) into `createDaemon` ([compose.ts](packages/server/src/compose.ts)), calls `resumeAll()`, and listens on `FF_PORT` (default 4400), data dir `FF_DATA_DIR` (default `~/.flow-fabric`). Tests build the same graph via `createDaemon({ dataDir })` — defaults are inert (no-op notifier, stub runners, NOOP telemetry). M1's go/no-go gate on `bpmn-engine` passed (verdict GO).
 
 ## Commands
 

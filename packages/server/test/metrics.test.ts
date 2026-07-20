@@ -3,9 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, afterEach } from 'vitest';
 import { InstanceStore } from '../src/engine-host/store.js';
-import { buildApi } from '../src/api/server.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 
 const tmp = () => mkdtempSync(path.join(os.tmpdir(), 'ff-spike-'));
 
@@ -37,9 +35,12 @@ describe('definition metrics', () => {
   const stores: InstanceStore[] = [];
   afterEach(() => stores.forEach((s) => s.close()));
 
-  function seed() {
-    const store = new InstanceStore(path.join(tmp(), 'ff.db'));
-    stores.push(store);
+  const daemons: Daemon[] = [];
+  afterEach(async () => {
+    for (const d of daemons.splice(0)) await d.close();
+  });
+
+  function seed(store: InstanceStore) {
     // two finished runs, one aborted, one still running
     for (const [id, status] of [
       ['a', 'completed'],
@@ -64,7 +65,9 @@ describe('definition metrics', () => {
   }
 
   it('aggregates runs, success rate, cost, and incidents per definition', () => {
-    const m = seed().metricsForDefinition('def-1');
+    const store = new InstanceStore(path.join(tmp(), 'ff.db'));
+    stores.push(store);
+    const m = seed(store).metricsForDefinition('def-1');
     expect(m.runs).toEqual({ total: 4, completed: 1, terminated: 1, aborted: 1, error: 0, active: 1 });
     expect(m.successRate).toBeCloseTo(2 / 3); // finished = completed+terminated+aborted+error
     expect(m.durationsMs).toHaveLength(2); // finished successfully only
@@ -77,12 +80,10 @@ describe('definition metrics', () => {
   });
 
   it('serves metrics over HTTP', async () => {
-    const store = seed();
-    let inbox!: Inbox;
-    const host = new EngineHost(store, { onUserTaskWait: (i) => inbox.handleWait(i) });
-    inbox = new Inbox(store, host, { notify: async () => {} });
-    const app = buildApi({ store, host, inbox });
-    const res = await app.inject({ method: 'GET', url: '/api/metrics/definitions/def-1' });
+    const d = createDaemon({ dataDir: tmp() });
+    daemons.push(d);
+    seed(d.store);
+    const res = await d.app.inject({ method: 'GET', url: '/api/metrics/definitions/def-1' });
     expect(res.statusCode).toBe(200);
     expect(res.json().runs.total).toBe(4);
   });

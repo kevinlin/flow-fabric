@@ -166,6 +166,10 @@ export class GrillSession {
   }
 }
 
+/** The production queryFn: the live Claude Agent SDK. Injected explicitly by
+ * the entrypoint — the composition root defaults to an inert thrower. */
+export const sdkQueryFn = query as unknown as AgentQueryFn;
+
 export class GrillHost {
   private sessions = new Map<string, GrillSession>();
 

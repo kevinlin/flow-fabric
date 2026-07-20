@@ -2,12 +2,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, afterEach } from 'vitest';
-import { InstanceStore } from '../src/engine-host/store.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
-import { DefinitionStore } from '../src/definitions/store.js';
-import { GrillHost } from '../src/grill/session.js';
-import { buildApi } from '../src/api/server.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 import type { AgentQueryFn } from '../src/runners/agent.js';
 
 const messy = readFileSync(new URL('./fixtures/messy.bpmn', import.meta.url), 'utf8');
@@ -20,25 +15,21 @@ const echoQuery: AgentQueryFn = ({ options }) =>
     yield { type: 'result', subtype: 'success', result: 'ok', session_id: 's-1', options };
   })();
 
+const daemons: Daemon[] = [];
+afterEach(async () => {
+  for (const d of daemons.splice(0)) await d.close();
+});
+
 function build() {
-  const dir = tmp();
-  const store = new InstanceStore(path.join(dir, 'ff.db'));
-  const definitions = new DefinitionStore(path.join(dir, 'ff.db'));
-  let inbox!: Inbox;
-  const host = new EngineHost(store, { onUserTaskWait: (i) => inbox.handleWait(i) });
-  inbox = new Inbox(store, host, { notify: async () => {} });
-  const grill = new GrillHost({ definitions, queryFn: echoQuery });
-  const app = buildApi({ store, host, inbox, definitions, grill });
-  return { store, definitions, app };
+  const d = createDaemon({ dataDir: tmp(), grillQueryFn: echoQuery });
+  daemons.push(d);
+  return d;
 }
 
 describe('grill API', () => {
-  const closers: Array<{ close(): void }> = [];
-  afterEach(() => closers.forEach((s) => s.close()));
 
   it('creates a session, accepts messages, saves a version', async () => {
-    const { store, definitions, app } = build();
-    closers.push(store, definitions);
+    const { definitions, app } = build();
     const { id } = (await app.inject({
       method: 'POST', url: '/api/definitions', payload: { name: 'messy', xml: messy },
     })).json();
@@ -64,8 +55,7 @@ describe('grill API', () => {
   });
 
   it('404s on unknown definition or session', async () => {
-    const { store, definitions, app } = build();
-    closers.push(store, definitions);
+    const { app } = build();
     const bad = await app.inject({
       method: 'POST', url: '/api/grill/sessions', payload: { definitionId: 'ghost' },
     });
@@ -78,13 +68,9 @@ describe('grill API', () => {
 });
 
 describe('instances from stored versions', () => {
-  const closers: Array<{ close(): void }> = [];
-  afterEach(() => closers.forEach((s) => s.close()));
 
   it('starts a dry run from a deployable version and 400s on a non-deployable one', async () => {
     const { store, definitions, app } = build();
-    closers.push(store, definitions);
-
     // deployable definition
     const dep = (await app.inject({
       method: 'POST', url: '/api/definitions', payload: { name: 'daily', xml: refined },

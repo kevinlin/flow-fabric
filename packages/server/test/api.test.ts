@@ -3,10 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { describe, it, expect, afterEach } from 'vitest';
-import { InstanceStore } from '../src/engine-host/store.js';
-import { EngineHost } from '../src/engine-host/engine-host.js';
-import { Inbox } from '../src/inbox/inbox.js';
-import { buildApi } from '../src/api/server.js';
+import { createDaemon, type Daemon } from '../src/compose.js';
 import type { RunResult, TaskRunner } from '../src/runners/types.js';
 
 const contracts = readFileSync(new URL('./fixtures/contracts.bpmn', import.meta.url), 'utf8');
@@ -19,17 +16,18 @@ const alwaysFail: TaskRunner = {
   },
 };
 
+const daemons: Daemon[] = [];
+afterEach(async () => {
+  for (const d of daemons.splice(0)) await d.close();
+});
+
 function build(runner?: TaskRunner) {
-  const store = new InstanceStore(path.join(tmp(), 'ff.db'));
-  let inbox!: Inbox;
-  const host = new EngineHost(store, {
+  const d = createDaemon({
     dataDir: tmp(),
-    onUserTaskWait: (info) => inbox.handleWait(info),
     ...(runner ? { runners: { agent: runner, code: runner } } : {}),
   });
-  inbox = new Inbox(store, host, { notify: async () => {} });
-  const app = buildApi({ store, host, inbox });
-  return { store, host, inbox, app };
+  daemons.push(d);
+  return d;
 }
 
 async function post(app: any, url: string, payload: unknown) {
@@ -46,13 +44,9 @@ async function until<T>(fn: () => T | undefined | false): Promise<T> {
 }
 
 describe('REST API', () => {
-  const stores: InstanceStore[] = [];
-  afterEach(() => stores.forEach((s) => s.close()));
 
   it('drives a dry run end-to-end over HTTP', async () => {
     const { store, app } = build();
-    stores.push(store);
-
     const created = await post(app, '/api/instances', {
       name: 'contracts', source: contracts, workspacePath: tmp(),
       dryRun: true, inputs: { deadline: '2026-08-01' },
@@ -81,8 +75,7 @@ describe('REST API', () => {
   });
 
   it('rejects invalid form submissions with 400', async () => {
-    const { store, app } = build();
-    stores.push(store);
+    const { app } = build();
     await post(app, '/api/instances', { name: 'c', source: contracts, workspacePath: tmp(), dryRun: true });
     let userTask: any;
     for (let i = 0; i < 100 && !userTask; i++) {
@@ -94,8 +87,7 @@ describe('REST API', () => {
   });
 
   it('enforces one active instance per workspace with 409 (FR-10)', async () => {
-    const { store, app } = build();
-    stores.push(store);
+    const { app } = build();
     const ws = tmp();
     const first = await post(app, '/api/instances', { name: 'a', source: contracts, workspacePath: ws, dryRun: true });
     expect(first.statusCode).toBe(201);
@@ -105,7 +97,6 @@ describe('REST API', () => {
 
   it('exposes incidents in the inbox and resolves them over HTTP', async () => {
     const { store, app } = build(alwaysFail);
-    stores.push(store);
     await post(app, '/api/instances', { name: 'f', source: failure, workspacePath: tmp() });
     let incident: any;
     for (let i = 0; i < 100 && !incident; i++) {
@@ -118,12 +109,11 @@ describe('REST API', () => {
   });
 
   it('streams events over SSE', async () => {
-    const { store, app } = build();
-    stores.push(store);
+    const { app } = build();
     await app.listen({ port: 0 });
+    const controller = new AbortController();
     try {
       const port = (app.server.address() as { port: number }).port;
-      const controller = new AbortController();
       const res = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: controller.signal });
       expect(res.headers.get('content-type')).toContain('text/event-stream');
       const reader = res.body!.getReader();
@@ -137,9 +127,9 @@ describe('REST API', () => {
         stream += decoder.decode(value);
       }
       expect(stream).toContain('data:');
-      controller.abort();
     } finally {
-      await app.close();
+      // Drop the live SSE connection so afterEach's d.close() can't hang on it.
+      controller.abort();
     }
   });
 });

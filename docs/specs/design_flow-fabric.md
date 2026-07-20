@@ -59,6 +59,9 @@ Each module has one purpose and a defined interface; dependencies point inward t
 | `events` | Append-only event log, single write path, SSE fan-out, OTel emission | `append(event)`, `subscribe(filter)` |
 | `inbox` | Pending user tasks + incidents, form submission | `listPending()`, `submit(taskId, vars)`, `resolveIncident(id, action)` |
 | `notify` | Push channel for user tasks + incidents (FR-13) | `notify(title, body, link)` |
+| `compose` | Composition root: wires the full Daemon graph, owns teardown order | `createDaemon(opts): Daemon`, `Daemon.close()` |
+
+**Composition-root amendment (2026-07-20).** The Daemon graph is wired in exactly one place: `compose.ts` (`createDaemon`). Its defaults are inert — no-op notifier, stub-runner dry-run path, NOOP telemetry, fail-fast grill queryFn — so a bare `createDaemon({ dataDir })` can never notify, call the Claude SDK, or export telemetry. `daemon.ts` is the process entrypoint and the only site constructing production adapters (`AgentRunner`/`CodeRunner`, `MacNotifier`, `initTelemetry()`, the SDK grill queryFn, webRoot); tests build the same graph and override only the adapter they assert on. `Daemon.close()` owns the teardown order: stop engines (awaiting in-flight runs) → close API → flush telemetry → close stores; it is idempotent.
 
 ## 4. Flow Fabric BPMN profile
 
@@ -146,6 +149,7 @@ Runner specifics:
 
 - Persist engine state on every `activity.start`, `activity.end`, `activity.wait`, timer registration.
 - On daemon boot: `resumeAll()` loads non-terminal instances, recreates engines from `engine_state`, re-arms timers with remaining duration computed from persisted fire-at timestamps.
+- `stopAll()` stops every engine and awaits all in-flight runs — including starts whose engine has not registered yet (`engine.execute()` still pending). After it resolves, no engine writes remain, so shutdown may close the store without racing a live run (2026-07-20 hardening; the race originally surfaced as the M4 unhandled-rejection finding).
 - M1 spike validates exactly this against a multi-hour timer before anything else is built (§10).
 
 ### 6.3 Failure ladder (FR-17, FR-18)
@@ -202,6 +206,7 @@ Forms are rendered from JSON Schema (`@rjsf` or equivalent); complex inputs (fil
 | Runners | Contract tests per runner; agent runner against a mock SDK transport |
 | Failure ladder | Simulated failures at each rung: retry exhaustion → boundary routing → incident lifecycle |
 | E2E | Refined rfp-daily completes a full dry-run daily cycle; interview-process imports and lints without execution (G2) |
+| Composition | `compose.test.ts`: inert defaults end-to-end (dry run over HTTP, grill fails fast without a queryFn), `close()` teardown order + idempotence, close-immediately-after-start settles the run |
 
 Dry-run mode doubles as the E2E harness: same engine, stub runners.
 
