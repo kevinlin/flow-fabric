@@ -237,7 +237,6 @@ p, li, dd { text-wrap: pretty; }
   padding: 40px 48px;
   overflow: auto;
 }
-.content > section { max-width: 1160px; }
 
 /* ---- Typography ---------------------------------------------------------- */
 
@@ -545,7 +544,6 @@ tbody tr { transition: background 110ms var(--ease-out); }
 
 /* ---- Refine: diagram + grill chat ---------------------------------------- */
 
-.content > .refine { max-width: none; } /* diagram spans the whole content area */
 .refine {
   display: flex;
   flex-direction: column;
