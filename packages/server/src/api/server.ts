@@ -69,6 +69,10 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing, webR
       name = definitions.getDefinition(body.definitionId)?.name ?? name;
     }
     if (!source) return reply.code(400).send({ error: 'source or definitionId required' });
+    const workspace = body.workspacePath.replace(/\\ /g, ' ');
+    if (!existsSync(workspace)) {
+      return reply.code(400).send({ error: `workspace path does not exist: ${workspace}` });
+    }
     const id = randomUUID();
     try {
       // start() inserts the row synchronously (so the workspace-lock conflict
@@ -77,7 +81,7 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing, webR
         id,
         name,
         source,
-        workspace: body.workspacePath,
+        workspace,
         variables: body.inputs,
         dryRun: body.dryRun,
         stubOverrides: body.stubOverrides,
@@ -89,7 +93,7 @@ export function buildApi({ store, host, inbox, definitions, grill, logRing, webR
       if (String(err).includes('UNIQUE constraint failed')) {
         return reply
           .code(409)
-          .send({ error: `workspace ${body.workspacePath} already has an active instance` });
+          .send({ error: `workspace ${workspace} already has an active instance` });
       }
       throw err;
     }
