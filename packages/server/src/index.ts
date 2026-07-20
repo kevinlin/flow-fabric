@@ -9,6 +9,8 @@ export type {
   IncidentRow,
   TaskExecutionRow,
 } from './engine-host/store.js';
+export { Events } from './events/events.js';
+export type { DomainEvent, EmittedEvent, EventStore, EventFilter } from './events/events.js';
 export { makeLadderRunTask } from './engine-host/failure.js';
 export type { LadderDeps, Hold } from './engine-host/failure.js';
 export { EngineHost } from './engine-host/engine-host.js';

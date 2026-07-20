@@ -1,5 +1,6 @@
 import type { AgentTaskContract, CodeTaskContract } from '@flowfabric/shared';
 import type { InstanceStore } from './store.js';
+import type { Events } from '../events/events.js';
 import type { DispatchDeps, EngineEnvironment, RunTaskFn } from './dispatch.js';
 import { makeSingleAttemptRunTask } from './dispatch.js';
 import { type Notifier, DEFAULT_INBOX_LINK } from '../notify/notifier.js';
@@ -18,6 +19,7 @@ export interface Hold {
 
 export interface LadderDeps extends DispatchDeps {
   store: InstanceStore;
+  events: Events;
   notifier?: Notifier;
   /** Registry shared with EngineHost, keyed `${instanceId}:${nodeId}`. */
   holds: Map<string, Hold>;
@@ -54,15 +56,16 @@ export function makeLadderRunTask(deps: LadderDeps): RunTaskFn {
             return resolve(await attempt());
           } catch (err) {
             lastError = err;
-            deps.store.appendEvent(deps.instanceId, 'task.attempt-failed', nodeId, String(err));
+            deps.events.append({ instanceId: deps.instanceId, type: 'task.attempt-failed', elementId: nodeId, detail: String(err) });
           }
         }
         // Rung 2: modeled error boundary → let the engine route the token.
         if (deps.profile.errorBoundaryHosts.has(nodeId)) return reject(lastError as Error);
         // Rung 3: incident. Token pauses (promise stays pending).
         const incidentId = deps.store.createIncident(deps.instanceId, nodeId, String(lastError));
+        deps.events.incidentRaised(nodeId);
         deps.store.setStatus(deps.instanceId, 'incident');
-        deps.store.appendEvent(deps.instanceId, 'incident.raised', nodeId, String(lastError));
+        deps.events.append({ instanceId: deps.instanceId, type: 'incident.raised', elementId: nodeId, detail: String(lastError) });
         void deps.notifier?.notify(
           'Flow Fabric incident',
           `${nodeId} failed after ${contract.retries + 1} attempts`,

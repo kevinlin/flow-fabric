@@ -1,6 +1,4 @@
-import { EventEmitter } from 'node:events';
 import Database from 'better-sqlite3';
-import type { Telemetry } from '../telemetry/telemetry.js';
 
 export type InstanceStatus =
   | 'running'
@@ -10,8 +8,6 @@ export type InstanceStatus =
   | 'error'
   | 'incident'
   | 'aborted';
-
-const TERMINAL_STATUSES = new Set<InstanceStatus>(['completed', 'terminated', 'aborted', 'error']);
 
 export interface InstanceRow {
   id: string;
@@ -97,13 +93,9 @@ function coerceInstance(row: RawInstanceRow): InstanceRow {
 
 export class InstanceStore {
   private db: Database.Database;
-  private emitter = new EventEmitter();
-  private telemetry: Telemetry | undefined;
 
-  constructor(dbPath: string, opts: { telemetry?: Telemetry } = {}) {
-    this.telemetry = opts.telemetry;
+  constructor(dbPath: string) {
     this.db = new Database(dbPath);
-    this.emitter.setMaxListeners(0); // one listener per SSE connection
     this.db.pragma('journal_mode = WAL');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS instances (
@@ -218,45 +210,17 @@ export class InstanceStore {
   }
 
   setStatus(id: string, status: InstanceStatus): void {
-    const prior = this.telemetry ? this.getInstance(id)?.status : undefined;
     this.db
       .prepare(`UPDATE instances SET status = ?, updated_at = ? WHERE id = ?`)
       .run(status, Date.now(), id);
-    if (!this.telemetry || !TERMINAL_STATUSES.has(status)) return;
-    if (prior === undefined || TERMINAL_STATUSES.has(prior)) return; // unknown row or already terminal
-    const row = this.getInstance(id)!;
-    this.telemetry.instanceEnded({
-      instanceId: id,
-      name: row.name,
-      status: status as 'completed' | 'terminated' | 'aborted' | 'error',
-      startedAt: row.createdAt,
-      endedAt: row.updatedAt,
-      definitionId: row.definitionId ?? undefined,
-      versionNo: row.versionNo ?? undefined,
-      dryRun: row.dryRun,
-      events: this.listEvents(id).map((e) => ({ type: e.type, elementId: e.elementId, ts: e.ts })),
-    });
   }
 
-  appendEvent(instanceId: string, type: string, elementId?: string, detail?: string): void {
-    const ts = Date.now();
+  /** INSERT an event row, returning its seq. Fan-out is the Events module's job. */
+  insertEvent(instanceId: string, type: string, elementId?: string, detail?: string): number {
     const result = this.db
       .prepare(`INSERT INTO events (instance_id, type, element_id, detail, ts) VALUES (?, ?, ?, ?, ?)`)
-      .run(instanceId, type, elementId ?? null, detail ?? null, ts);
-    this.emitter.emit('event', {
-      instanceId,
-      seq: Number(result.lastInsertRowid),
-      type,
-      elementId: elementId ?? null,
-      detail: detail ?? null,
-      ts,
-    });
-  }
-
-  /** Subscribe to appended events (SSE fan-out). Returns an unsubscribe function. */
-  onEvent(listener: (event: EventRow & { instanceId: string }) => void): () => void {
-    this.emitter.on('event', listener);
-    return () => this.emitter.off('event', listener);
+      .run(instanceId, type, elementId ?? null, detail ?? null, Date.now());
+    return Number(result.lastInsertRowid);
   }
 
   getInstance(id: string): InstanceRow | undefined {
@@ -380,21 +344,6 @@ export class InstanceStore {
         Date.now(),
         id,
       );
-    if (!this.telemetry) return;
-    const row = this.getTaskExecution(id);
-    if (!row) return;
-    this.telemetry.taskExecution({
-      instanceId: row.instanceId,
-      nodeId: row.nodeId,
-      actor: row.actor,
-      attempt: row.attempt,
-      status: result.status,
-      startedAt: row.startedAt,
-      endedAt: row.endedAt ?? Date.now(),
-      error: row.error ?? undefined,
-      tokenUsage: row.tokenUsage ?? undefined,
-      costUsd: row.costUsd ?? undefined,
-    });
   }
 
   getTaskExecution(id: number): TaskExecutionRow | undefined {
@@ -416,7 +365,6 @@ export class InstanceStore {
          VALUES (?, ?, ?, 'open', ?)`,
       )
       .run(instanceId, nodeId, reason, Date.now());
-    this.telemetry?.incidentRaised(nodeId);
     return Number(result.lastInsertRowid);
   }
 
