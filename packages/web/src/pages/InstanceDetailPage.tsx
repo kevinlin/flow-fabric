@@ -96,8 +96,46 @@ function Timeline({ rows, onViewTranscript }: TimelineProps) {
 }
 
 function OutputCell({ json }: { json: string | null }) {
+  const [expanded, setExpanded] = useState(false);
   if (!json) return <span className="muted">—</span>;
-  return <code className="cell-json" title={json}>{json.length > 60 ? `${json.slice(0, 60)}…` : json}</code>;
+
+  let formatted: string;
+  try { formatted = JSON.stringify(JSON.parse(json), null, 2); } catch { formatted = json; }
+
+  return (
+    <div className={`cell-json-wrap${expanded ? ' expanded' : ''}`}>
+      {expanded ? (
+        <>
+          <button
+            type="button"
+            className="cell-json-collapse"
+            onClick={() => setExpanded(false)}
+            aria-expanded
+            title="Collapse"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M3 7.5 L6 4.5 L9 7.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Collapse
+          </button>
+          <pre className="cell-json-expanded">{formatted}</pre>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="cell-json-toggle"
+          onClick={() => setExpanded(true)}
+          aria-expanded={false}
+          title="Expand payload"
+        >
+          <code className="cell-json">{json}</code>
+          <svg className="cell-json-chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 4.5 L6 7.5 L9 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
 }
 
 function TranscriptDialog({ execId, onClose }: { execId: number; onClose: () => void }) {

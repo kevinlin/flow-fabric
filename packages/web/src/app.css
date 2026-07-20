@@ -282,6 +282,67 @@ code, .cell-json {
   vertical-align: bottom;
 }
 
+/* Expandable JSON payload wrapper */
+.cell-json-wrap { position: relative; min-width: 0; }
+
+.cell-json-toggle {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+}
+.cell-json-toggle .cell-json {
+  cursor: pointer;
+  transition: background 110ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cell-json-toggle:hover .cell-json {
+    background: var(--hairline);
+  }
+}
+.cell-json-chevron {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+
+.cell-json-collapse {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--slate);
+  margin-bottom: 6px;
+  transition: color 110ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cell-json-collapse:hover { color: var(--ink); }
+}
+
+.cell-json-expanded {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--soft-stone);
+  border-radius: var(--r-xs);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre;
+  overflow: auto;
+  max-height: 280px;
+  min-width: 200px;
+  max-width: min(540px, 60vw);
+  border: 1px solid var(--card-border);
+}
+
 /* ---- Buttons: pill language, near-black on hover/emphasis ---------------- */
 
 button {
