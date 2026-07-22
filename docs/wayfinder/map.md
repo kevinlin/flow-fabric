@@ -55,17 +55,31 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
   loop when "run again?" is flow control — flagship stays as-is; timer-enqueue for pure cadence).
   A **minimal durable queue**: FIFO, per-workspace serialized (busy → wait, never drop), deduped on
   correlation identity. Scheduler + queue are deterministic code — bet intact.
+- [How do workflows compose, and what does it cost the BPMN profile?](tickets/003-composition-mechanism.md) —
+  **Pipeline chaining** (A finishes → B starts, no parent waits), committed for v-next; hierarchical
+  call-and-return deferred to fog. Handoff is **in-BPMN, hard-named**: a terminal `scriptTask`
+  enqueues the successor's envelope on 002's queue (a third enqueue source); exclusive gateways do
+  conditional chains. Medium: workspace = artifacts, envelope `input` = typed params (schema shape →
+  004). **Zero new BPMN elements** (reuses scriptTask + gateway + end event; one runtime item: an
+  enqueue API); v1 profile exclusions stay firm. Durable for free (independent instances; double-
+  enqueue covered by 002's dedup). Bet holds verbatim. No first-class pipeline object.
 
 ## Not yet specified
 
 <!-- in-scope fog toward the destination; graduates into tickets as the frontier advances -->
 
+- **Hierarchical call-and-return composition** — a workflow invoking a sub-workflow
+  mid-flight, waiting, and consuming its result. Deferred by ticket 003 in favour of chaining;
+  it *is* the R01 profile-expansion project (callActivity/subProcess + linter + `readProfile`
+  recursion + dispatch keying + `one_active_per_workspace` rework). The vision may gesture at it
+  as "where composition heads later."
 - **Parallelism + sandboxes** — isolated worktrees, concurrent attempts, racing
   (first-to-pass wins). On the horizon; the vision may gesture at it as "where this heads later."
 - **Beyond one operator / machine** — team/multi-user, multiple repos, remote/cloud
   execution. On the horizon; "later."
 - **Cross-factory observability** — how dashboards, incidents, and the inbox scale
-  once many workflows run under one factory. Sharpens after routing + library shape settle.
+  once many workflows run under one factory, now including **watching a running pipeline**
+  (chaining makes multi-workflow runs concrete — ticket 003). Sharpens after routing + library shape settle.
 - **Library governance** — versioning, discovery, and sharing of workflow definitions.
   Sharpens after "what a library means" resolves.
 
