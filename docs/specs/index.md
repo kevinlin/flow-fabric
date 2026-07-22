@@ -22,3 +22,4 @@ Navigation map of all specification documents.
 | M3 — Intake | [plan_m3-intake.md](plan_m3-intake.md) | Done |
 | M4 — Web UI | [plan_m4-web-ui.md](plan_m4-web-ui.md) | Done |
 | M5 — OTel + soak | [plan_m5-otel-soak.md](plan_m5-otel-soak.md) | Planned |
+| V2-M1 — Input contract (`inputSchema`) | [plan_v2-m1-input-schema.md](plan_v2-m1-input-schema.md) | Planned |
