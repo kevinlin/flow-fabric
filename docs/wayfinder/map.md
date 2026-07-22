@@ -49,6 +49,12 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
   on the type field, no agent on the routing decision. Agents may run as intake tasks but no gateway
   routes on agent output. Positioning strengthens to "the engine owns orchestration at every level —
   agents decide neither the next node nor the next workflow."
+- [What does 'work arriving' mean for a solo operator?](tickets/002-intake-model-solo-operator.md) —
+  A typed job envelope (source names the workflow directly — type==workflow, no category map).
+  v-next sources: manual enqueue + **timer-enqueue**; two recurrence models coexist (intra-workflow
+  loop when "run again?" is flow control — flagship stays as-is; timer-enqueue for pure cadence).
+  A **minimal durable queue**: FIFO, per-workspace serialized (busy → wait, never drop), deduped on
+  correlation identity. Scheduler + queue are deterministic code — bet intact.
 
 ## Not yet specified
 

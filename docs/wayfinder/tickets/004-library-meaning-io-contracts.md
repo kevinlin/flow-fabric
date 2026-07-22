@@ -23,3 +23,12 @@ Two linked decisions:
 
 Blocked by the composition mechanism (ticket 003): how workflows hand off decides what
 the contract must express. Library governance (versioning, sharing) stays fog until this lands.
+
+**Inherited from tickets 001 + 002 (deterministic routing, type==workflow):** the router
+no longer needs the library as a match-against catalog — the source names the workflow
+directly, so there is nothing for the router to "pick." The second bullet's routing
+justification is mooted. The library therefore shrinks toward today's `DefinitionStore`
++ version pinning (latest-deployable / pinned). The **contract layer's remaining live
+purpose is composition** (ticket 003): a typed handoff of process variables between a
+caller workflow and a callee — not router matching. Re-scope this ticket around that when
+it comes up.
