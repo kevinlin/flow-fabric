@@ -72,6 +72,14 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
   resolved at dequeue, optional pin**. **"Library" = today's `DefinitionStore` + one `description`
   field** — no tags/search/catalog (that's governance fog). Bet intact (deterministic build +
   validate + resolve; no agent in the contract path).
+- [Domain identity — software factory, or general ADW factory?](tickets/005-domain-identity.md) —
+  **General ADW factory** (domain-neutral). Option 1 (code-centric) was foreclosed — 001–004 already
+  built a general router (no category map) + library. Identity noun stays **control plane**; the
+  **factory is a capability layer** (routing + library), not the headline, so the bet stays crisp.
+  **Assert-only** generality — a code-domain exemplar is roadmap, not a v-next deliverable. **"ADW"
+  redefined in place**: a Developer Workflow develops *an artifact* (code, bid, report), not
+  necessarily code. Bet untouched, strengthened (authority model is domain-independent). IndyDevDan =
+  generalized lead inspiration, handed to 006.
 
 ## Not yet specified
 
@@ -94,6 +102,11 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
 - **Library governance** — discovery (tags/search/catalog) and sharing of workflow definitions.
   Ticket 004 landed the minimal library (`DefinitionStore` + a `description` field + latest-default
   version binding with optional pin); tags, search, and cross-machine sharing stay deferred here.
+- **Second, code-domain exemplar workflow** — the artifact that would *prove* the general-ADW-factory
+  claim rather than assert it. Ticket 005 chose assert-only generality; a code ADW (bug-fix, chore)
+  running alongside `rfp-daily` is the demonstration that "software dev is one workflow among many"
+  is real, not just stated. Roadmap, not a v-next build. Doubles as the software-factory demo the
+  Zühlke audience expects.
 
 ## Out of scope
 
