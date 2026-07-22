@@ -63,6 +63,15 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
   004). **Zero new BPMN elements** (reuses scriptTask + gateway + end event; one runtime item: an
   enqueue API); v1 profile exclusions stay firm. Durable for free (independent instances; double-
   enqueue covered by 002's dedup). Bet holds verbatim. No first-class pipeline object.
+- [What is a 'workflow library', and how do workflows declare their I/O?](tickets/004-library-meaning-io-contracts.md) —
+  **No process-level output contract** (typing lives on the receiving side; a hard-named chain's
+  contract *is* B's input schema). B declares a process-level **`inputSchema` (JSON Schema)**,
+  replacing flat `instanceInputs`, Ajv-validated like `formSchema`. Envelope `input` validated
+  **twice** — enqueue-time (fails producer A's ladder) + B-start (durable-queue defense); shared by
+  all three enqueue sources. Envelope is `{workflow, input, version?}`: **latest-deployable default
+  resolved at dequeue, optional pin**. **"Library" = today's `DefinitionStore` + one `description`
+  field** — no tags/search/catalog (that's governance fog). Bet intact (deterministic build +
+  validate + resolve; no agent in the contract path).
 
 ## Not yet specified
 
@@ -72,7 +81,9 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
   mid-flight, waiting, and consuming its result. Deferred by ticket 003 in favour of chaining;
   it *is* the R01 profile-expansion project (callActivity/subProcess + linter + `readProfile`
   recursion + dispatch keying + `one_active_per_workspace` rework). The vision may gesture at it
-  as "where composition heads later."
+  as "where composition heads later." **Also carries the deferred typed process-level *output*
+  contract** (ticket 004 declined it for hard-named chains) — structural caller/callee matching
+  and discovery need it, hard-named chaining does not.
 - **Parallelism + sandboxes** — isolated worktrees, concurrent attempts, racing
   (first-to-pass wins). On the horizon; the vision may gesture at it as "where this heads later."
 - **Beyond one operator / machine** — team/multi-user, multiple repos, remote/cloud
@@ -80,8 +91,9 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
 - **Cross-factory observability** — how dashboards, incidents, and the inbox scale
   once many workflows run under one factory, now including **watching a running pipeline**
   (chaining makes multi-workflow runs concrete — ticket 003). Sharpens after routing + library shape settle.
-- **Library governance** — versioning, discovery, and sharing of workflow definitions.
-  Sharpens after "what a library means" resolves.
+- **Library governance** — discovery (tags/search/catalog) and sharing of workflow definitions.
+  Ticket 004 landed the minimal library (`DefinitionStore` + a `description` field + latest-default
+  version binding with optional pin); tags, search, and cross-machine sharing stay deferred here.
 
 ## Out of scope
 
