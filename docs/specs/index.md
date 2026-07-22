@@ -10,6 +10,8 @@ Navigation map of all specification documents.
 | Requirements (PRD v2 — factory intake) | [prd_v2_factory-intake.md](../product/prd_v2_factory-intake.md) | Draft |
 | Design | [design_flow-fabric.md](design_flow-fabric.md) | Approved v1 |
 | Implementation milestones | [impl_flow-fabric.md](impl_flow-fabric.md) | Approved v1 |
+| Design (v2 — factory intake) | [design_v2_factory-intake.md](design_v2_factory-intake.md) | Draft |
+| Implementation milestones (v2) | [impl_v2_factory-intake.md](impl_v2_factory-intake.md) | Draft |
 
 ## Plans by milestone
 
