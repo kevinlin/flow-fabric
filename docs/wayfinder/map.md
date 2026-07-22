@@ -81,6 +81,14 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
   necessarily code. Bet untouched, strengthened (authority model is domain-independent). IndyDevDan =
   generalized lead inspiration, handed to 006.
 
+- [Synthesize the direction + vision statement (the destination artifact)](tickets/006-synthesize-direction-vision.md) —
+  **Destination reached.** The locked direction lives at
+  [docs/product/direction_flow-fabric.md](../product/direction_flow-fabric.md). Headline:
+  "the control plane for a factory of AI Developer Workflows" (factory = workload topology,
+  control plane stays the identity noun, per 005). Hybrid register: narrative positioning +
+  vision, bulleted decision lock (001–005), scope boundary, PRD-must-carry, prior-art note.
+  No open tickets remain; items below are the post-destination horizon, not unfinished work.
+
 ## Not yet specified
 
 <!-- in-scope fog toward the destination; graduates into tickets as the frontier advances -->
