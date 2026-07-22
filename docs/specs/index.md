@@ -6,7 +6,8 @@ Navigation map of all specification documents.
 
 | Artefact | File | Status |
 |---|---|---|
-| Requirements (PRD) | [prd_flow-fabric.md](../product/prd_flow-fabric.md) | Draft v1 |
+| Requirements (PRD v1) | [prd_v1_flow-fabric.md](../product/prd_v1_flow-fabric.md) | Draft v1 |
+| Requirements (PRD v2 — factory intake) | [prd_v2_factory-intake.md](../product/prd_v2_factory-intake.md) | Draft |
 | Design | [design_flow-fabric.md](design_flow-fabric.md) | Approved v1 |
 | Implementation milestones | [impl_flow-fabric.md](impl_flow-fabric.md) | Approved v1 |
 

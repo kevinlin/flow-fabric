@@ -4,7 +4,7 @@
 |---|---|
 | Status | Approved v1 |
 | Date | 2026-07-18 |
-| PRD | [prd_flow-fabric.md](../product/prd_flow-fabric.md) |
+| PRD | [prd_v1_flow-fabric.md](../product/prd_v1_flow-fabric.md) |
 | Implementation | [impl_flow-fabric.md](impl_flow-fabric.md) |
 
 ## 1. Architecture decision

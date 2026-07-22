@@ -19,7 +19,7 @@ BPMN is the source of truth. Decisions only; a future PRD is built from it.
 ## Notes
 
 - **Domain**: Flow Fabric product direction. Orient every session to
-  [PRODUCT.md](../../PRODUCT.md), [the PRD](../product/prd_flow-fabric.md), and
+  [PRODUCT.md](../../PRODUCT.md), [the PRD](../product/prd_v1_flow-fabric.md), and
   [the IndyDevDan ADW/Software-Factory notes](../product/forget-loop-engineering-indydevdan.md)
   before deciding.
 - **Skills**: grilling + domain-modeling for grilling tickets; /research (subagent)

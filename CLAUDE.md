@@ -109,7 +109,7 @@ Load-bearing and easy to get wrong. Full rationale + probe evidence live in the 
 
 [docs/specs/index.md](docs/specs/index.md) is the canonical navigation map — start there. Read the relevant spec before extending: M1–M4 are built, only M5 (OTel + soak) is still spec. Milestone-specific findings and gotchas live in the plan files; load them on demand.
 
-- [docs/product/prd_flow-fabric.md](docs/product/prd_flow-fabric.md) — PRD: problem, goals (G1–G3), requirements (FR-1..25), v1 scope
+- [docs/product/prd_v1_flow-fabric.md](docs/product/prd_v1_flow-fabric.md) — PRD: problem, goals (G1–G3), requirements (FR-1..25), v1 scope
 - [docs/specs/design_flow-fabric.md](docs/specs/design_flow-fabric.md) — approved design: modules, profile, data model, execution semantics, failure ladder
 - [docs/specs/impl_flow-fabric.md](docs/specs/impl_flow-fabric.md) — five milestones (M1–M5), each with a verification gate
 - Plans (all done, compacted post-ship): [M1 engine spike](docs/specs/plan_m1-engine-spike.md) (+ spike findings, GO verdict), [M2 runners + failure ladder](docs/specs/plan_m2-runners-failure-ladder.md) (+ dispatch spike findings), [M3 intake](docs/specs/plan_m3-intake.md), [M4 web UI](docs/specs/plan_m4-web-ui.md) (+ build findings for M5)
